@@ -193,11 +193,13 @@ export const api = {
     index: number,
     textBlockIndex?: number,
     language?: string,
+    systemPromptTemplate?: string,
   ): Promise<void> {
     await invoke('llm_generate', {
       index,
       textBlockIndex,
       language,
+      systemPromptTemplate,
     })
   },
 
@@ -206,6 +208,7 @@ export const api = {
     llmModelId?: string
     llmApiKey?: string
     language?: string
+    systemPromptTemplate?: string
     shaderEffect?: RenderEffect
     shaderStroke?: RenderStroke
     fontFamily?: string

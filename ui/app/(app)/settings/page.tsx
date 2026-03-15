@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
+  CheckIcon,
 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -36,6 +37,7 @@ const API_PROVIDERS = [
   { id: 'openai', name: 'OpenAI', free_tier: false},
   { id: 'gemini', name: 'Gemini', free_tier: true},
   { id: 'claude', name: 'Claude', free_tier: false},
+  { id: 'deepseek', name: 'DeepSeek', free_tier: false},
 ] as const
 
 export default function SettingsPage() {
@@ -48,9 +50,13 @@ export default function SettingsPage() {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>()
   const apiKeys = usePreferencesStore((state) => state.apiKeys)
   const setApiKey = usePreferencesStore((state) => state.setApiKey)
+  const systemPrompt = usePreferencesStore((state) => state.systemPrompt)
+  const setSystemPrompt = usePreferencesStore((state) => state.setSystemPrompt)
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({})
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const pendingApiKeysRef = useRef<Record<string, string>>({})
+  const [promptDraft, setPromptDraft] = useState(systemPrompt)
+  const [promptSaved, setPromptSaved] = useState(false)
 
   useEffect(() => {
     if (!isTauri()) return
@@ -131,6 +137,12 @@ export default function SettingsPage() {
       delete saveTimersRef.current[provider]
       flushApiKeySave(provider)
     }, 300)
+  }
+
+  const handleSavePrompt = () => {
+    setSystemPrompt(promptDraft)
+    setPromptSaved(true)
+    setTimeout(() => setPromptSaved(false), 2000)
   }
 
   return (
@@ -279,6 +291,42 @@ export default function SettingsPage() {
               </div>
             </section>
 
+            {/* System Prompt Section */}
+            <section className='mb-8'>
+              <h2 className='text-foreground mb-1 text-sm font-bold'>
+                {t('settings.systemPrompt')}
+              </h2>
+              <p className='text-muted-foreground mb-4 text-sm'>
+                {t('settings.systemPromptDescription')}
+              </p>
+              <textarea
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value)}
+                rows={5}
+                className='border-border bg-card text-foreground placeholder:text-muted-foreground focus:ring-primary w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none resize-y'
+                placeholder={t('settings.systemPromptPlaceholder')}
+              />
+              <div className='mt-2 flex items-center gap-2'>
+                <button
+                  type='button'
+                  onClick={handleSavePrompt}
+                  className='bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition'
+                >
+                  {promptSaved ? (
+                    <>
+                      <CheckIcon className='size-4' />
+                      {t('settings.systemPromptSaved')}
+                    </>
+                  ) : (
+                    t('settings.systemPromptSave')
+                  )}
+                </button>
+                <p className='text-muted-foreground text-xs'>
+                  {t('settings.systemPromptHint')}
+                </p>
+              </div>
+            </section>
+
             {/* Divider */}
             <div className='border-border mb-8 border-t' />
 
@@ -299,3 +347,5 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+

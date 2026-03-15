@@ -186,6 +186,12 @@
     "deviceMl": "ML 運算",
     "apiKeys": "API 密鑰",
     "apiKeysDescription": "管理您在不同提供商的 API 密鑰。您的密鑰會安全地存儲在設備的密鑰鏈中，絕不會與他人共享。",
-    "freeTier": "免費等級"
+    "freeTier": "免費等級",
+    "systemPrompt": "系統提示詞",
+    "systemPromptDescription": "自定義傳送給 API LLM 提供商的提示詞。使用 {target_language} 作為目標語言的佔位符。",
+    "systemPromptPlaceholder": "輸入自定義系統提示詞...",
+    "systemPromptSave": "儲存",
+    "systemPromptSaved": "已儲存！",
+    "systemPromptHint": "更改將儲存到本機存儲，並用於所有基於 API 的翻譯。"
   }
 }

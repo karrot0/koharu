@@ -106,6 +106,7 @@ pub struct LlmGeneratePayload {
     pub index: usize,
     pub text_block_index: Option<usize>,
     pub language: Option<String>,
+    pub system_prompt_template: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -130,6 +131,7 @@ pub struct ProcessRequest {
     pub llm_model_id: Option<String>,
     pub llm_api_key: Option<String>,
     pub language: Option<String>,
+    pub system_prompt_template: Option<String>,
     pub shader_effect: Option<TextShaderEffect>,
     pub shader_stroke: Option<TextStrokeStyle>,
     pub font_family: Option<String>,
@@ -369,6 +371,7 @@ mod tests {
             index: 1,
             text_block_index: Some(0),
             language: Some("zh-CN".to_string()),
+            system_prompt_template: None,
         });
         round_trip(&LlmLoadParams {
             id: "sakura".to_string(),
@@ -384,6 +387,7 @@ mod tests {
             llm_model_id: Some("sakura".to_string()),
             llm_api_key: None,
             language: Some("zh-CN".to_string()),
+            system_prompt_template: None,
             shader_effect: Some(TextShaderEffect {
                 italic: true,
                 bold: true,

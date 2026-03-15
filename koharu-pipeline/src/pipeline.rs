@@ -169,7 +169,7 @@ async fn run_pipeline_inner(
                 PipelineStep::Inpaint => res.ml.inpaint(&mut snapshot).await?,
                 PipelineStep::LlmGenerate => {
                     res.llm
-                        .translate(&mut snapshot, req.language.as_deref())
+                        .translate(&mut snapshot, req.language.as_deref(), req.system_prompt_template.as_deref())
                         .await?;
                 }
                 PipelineStep::Render => {

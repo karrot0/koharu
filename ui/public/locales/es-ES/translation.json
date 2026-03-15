@@ -186,6 +186,12 @@
     "deviceMl": "Cómputo ML",
     "apiKeys": "Claves API",
     "apiKeysDescription": "Gestiona tus claves API para diferentes proveedores. Tus claves se almacenan de forma segura en el llavero de tu dispositivo y nunca se comparten con nadie.",
-    "freeTier": "Nivel gratuito"
+    "freeTier": "Nivel gratuito",
+    "systemPrompt": "Indicación del sistema",
+    "systemPromptDescription": "Personaliza el mensaje enviado a los proveedores LLM basados en API. Usa {target_language} como marcador del idioma destino.",
+    "systemPromptPlaceholder": "Introduce tu indicación de sistema personalizada...",
+    "systemPromptSave": "Guardar",
+    "systemPromptSaved": "¡Guardado!",
+    "systemPromptHint": "Los cambios se guardan en el almacenamiento local y se usan para todas las traducciones basadas en API."
   }
 }

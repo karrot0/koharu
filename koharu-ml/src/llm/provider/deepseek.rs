@@ -7,25 +7,23 @@ use koharu_http::http::http_client;
 
 use super::{AnyProvider, ensure_provider_success, system_prompt};
 
-pub struct ClaudeProvider {
+pub struct DeepSeekProvider {
     pub api_key: String,
 }
 
 #[derive(Serialize)]
-struct UserMessage {
+struct ChatMessage {
     role: &'static str,
     content: String,
 }
 
 #[derive(Serialize)]
-struct MessagesRequest<'a> {
+struct ChatRequest<'a> {
     model: &'a str,
-    max_tokens: u32,
-    system: String,
-    messages: Vec<UserMessage>,
+    messages: Vec<ChatMessage>,
 }
 
-impl AnyProvider for ClaudeProvider {
+impl AnyProvider for DeepSeekProvider {
     fn translate<'a>(
         &'a self,
         source: &'a str,
@@ -39,33 +37,36 @@ impl AnyProvider for ClaudeProvider {
                 None => system_prompt(target_language),
             };
 
-            let body = MessagesRequest {
+            let body = ChatRequest {
                 model,
-                max_tokens: 8192,
-                system: sys_prompt,
-                messages: vec![UserMessage {
-                    role: "user",
-                    content: source.to_string(),
-                }],
+                messages: vec![
+                    ChatMessage {
+                        role: "system",
+                        content: sys_prompt,
+                    },
+                    ChatMessage {
+                        role: "user",
+                        content: source.to_string(),
+                    },
+                ],
             };
 
             let response = http_client()
-                .post("https://api.anthropic.com/v1/messages")
-                .header("x-api-key", &self.api_key)
-                .header("anthropic-version", "2023-06-01")
+                .post("https://api.deepseek.com/v1/chat/completions")
+                .bearer_auth(&self.api_key)
                 .header("content-type", "application/json")
                 .body(serde_json::to_vec(&body)?)
                 .send()
                 .await?;
 
-            let resp: serde_json::Value = ensure_provider_success("claude", response)
+            let resp: serde_json::Value = ensure_provider_success("deepseek", response)
                 .await?
                 .json()
                 .await?;
 
-            let text = resp["content"][0]["text"]
+            let text = resp["choices"][0]["message"]["content"]
                 .as_str()
-                .ok_or_else(|| anyhow::anyhow!("Claude returned no content"))?
+                .ok_or_else(|| anyhow::anyhow!("DeepSeek returned no content"))?
                 .to_string();
 
             Ok(text)

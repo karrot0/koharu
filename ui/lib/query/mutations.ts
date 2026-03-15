@@ -466,6 +466,7 @@ export const useDocumentMutations = () => {
           llmModelId: selectedModel,
           llmApiKey,
           language,
+          systemPromptTemplate: usePreferencesStore.getState().systemPrompt || undefined,
           shaderEffect: renderEffect,
           shaderStroke: renderStroke,
           fontFamily,
@@ -504,6 +505,7 @@ export const useDocumentMutations = () => {
         llmModelId: selectedModel,
         llmApiKey,
         language,
+        systemPromptTemplate: usePreferencesStore.getState().systemPrompt || undefined,
         shaderEffect: renderEffect,
         shaderStroke: renderStroke,
         fontFamily,
@@ -664,6 +666,7 @@ export const useLlmMutations = () => {
         resolvedIndex,
         textBlockIndex,
         apiLanguageToBackendName(language),
+        usePreferencesStore.getState().systemPrompt || undefined,
       )
       await invalidateCurrentDocument(queryClient, resolvedIndex)
       useEditorUiStore.getState().setShowTextBlocksOverlay(true)

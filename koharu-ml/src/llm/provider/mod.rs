@@ -4,6 +4,7 @@ use std::pin::Pin;
 use anyhow::Context;
 
 pub mod claude;
+pub mod deepseek;
 pub mod gemini;
 pub mod openai;
 
@@ -50,5 +51,6 @@ pub trait AnyProvider: Send + Sync {
         source: &'a str,
         target_language: &'a str,
         model: &'a str,
+        prompt_template: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'a>>;
 }

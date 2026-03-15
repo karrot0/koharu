@@ -186,6 +186,12 @@
     "deviceMl": "ML Compute",
     "apiKeys": "API Keys",
     "apiKeysDescription": "Manage your API keys for different providers. Your keys are stored securely on your device keychain and are never shared with anyone.",
-    "freeTier": "Free Tier"
+    "freeTier": "Free Tier",
+    "systemPrompt": "System Prompt",
+    "systemPromptDescription": "Customize the prompt sent to API-based LLM providers. Use {target_language} as a placeholder for the target language.",
+    "systemPromptPlaceholder": "Enter your custom system prompt...",
+    "systemPromptSave": "Save",
+    "systemPromptSaved": "Saved!",
+    "systemPromptHint": "Changes are saved to local storage and used for all API-based translations."
   }
 }

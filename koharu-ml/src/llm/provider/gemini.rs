@@ -38,8 +38,14 @@ impl AnyProvider for GeminiProvider {
         source: &'a str,
         target_language: &'a str,
         model: &'a str,
+        prompt_template: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'a>> {
         Box::pin(async move {
+            let sys_prompt = match prompt_template {
+                Some(template) => template.replace("{target_language}", target_language),
+                None => system_prompt(target_language),
+            };
+
             let url = format!(
                 "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
                 model, self.api_key
@@ -48,7 +54,7 @@ impl AnyProvider for GeminiProvider {
             let body = GenerateRequest {
                 system_instruction: SystemInstruction {
                     parts: vec![Part {
-                        text: system_prompt(target_language),
+                        text: sys_prompt,
                     }],
                 },
                 contents: vec![Content {

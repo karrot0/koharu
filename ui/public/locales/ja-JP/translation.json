@@ -186,6 +186,12 @@
     "deviceMl": "ML 演算",
     "apiKeys": "API キー",
     "apiKeysDescription": "異なるプロバイダーの API キーを管理します。キーはデバイスのキーチェーンに安全に保存され、他人と共有されることはありません。",
-    "freeTier": "無料プラン"
+    "freeTier": "無料プラン",
+    "systemPrompt": "システムプロンプト",
+    "systemPromptDescription": "API LLM プロバイダーに送信するプロンプトをカスタマイズします。{target_language} を目標言語のプレースホルダーとして使用してください。",
+    "systemPromptPlaceholder": "カスタムシステムプロンプトを入力...",
+    "systemPromptSave": "保存",
+    "systemPromptSaved": "保存しました！",
+    "systemPromptHint": "変更はローカルストレージに保存され、すべての API ベースの翻訳に使用されます。"
   }
 }

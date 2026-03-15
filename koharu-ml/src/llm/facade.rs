@@ -482,6 +482,7 @@ impl Model {
             "openai" => Box::new(super::provider::openai::OpenAiProvider { api_key }),
             "gemini" => Box::new(super::provider::gemini::GeminiProvider { api_key }),
             "claude" => Box::new(super::provider::claude::ClaudeProvider { api_key }),
+            "deepseek" => Box::new(super::provider::deepseek::DeepSeekProvider { api_key }),
             other => anyhow::bail!("Unknown API provider: {other}"),
         };
         *self.state.write().await = State::ApiReady {
@@ -539,6 +540,7 @@ impl Model {
         &self,
         doc: &mut impl Translatable,
         target_language: Option<&str>,
+        prompt_template: Option<&str>,
     ) -> anyhow::Result<()> {
         let lang = target_language.unwrap_or("English");
         let mut guard = self.state.write().await;
@@ -547,7 +549,7 @@ impl Model {
             State::ApiReady { provider, model } => {
                 let text = doc.get_source()?;
                 let model = model.clone();
-                let response = provider.translate(&text, lang, &model).await?;
+                let response = provider.translate(&text, lang, &model, prompt_template).await?;
                 let response = response.trim().to_string();
                 doc.set_translation(response)
             }

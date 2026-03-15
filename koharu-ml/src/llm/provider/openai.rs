@@ -29,14 +29,20 @@ impl AnyProvider for OpenAiProvider {
         source: &'a str,
         target_language: &'a str,
         model: &'a str,
+        prompt_template: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'a>> {
         Box::pin(async move {
+            let sys_prompt = match prompt_template {
+                Some(template) => template.replace("{target_language}", target_language),
+                None => system_prompt(target_language),
+            };
+
             let body = ChatRequest {
                 model,
                 messages: vec![
                     ChatMessage {
                         role: "system",
-                        content: system_prompt(target_language),
+                        content: sys_prompt,
                     },
                     ChatMessage {
                         role: "user",
