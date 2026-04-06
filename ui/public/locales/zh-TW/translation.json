@@ -1,6 +1,8 @@
 {
   "common": {
-    "initializing": "初始化中..."
+    "initializing": "初始化中...",
+    "cancel": "取消",
+    "confirm": "確認"
   },
   "menu": {
     "file": "檔案",
@@ -335,6 +337,18 @@
     "ocr": "OCR",
     "translator": "翻譯器",
     "inpainter": "修補器",
-    "renderer": "渲染器"
+    "renderer": "渲染器",
+    "glossary": "詞彙表",
+    "glossaryDescription": "定義術語對以確保翻譯的一致性。詞彙表將附加至系統提示，使模型使用您偏好的術語。",
+    "glossaryEmpty": "尚無條目，請在下方新增術語對。",
+    "glossarySourcePlaceholder": "原始術語",
+    "glossaryTargetPlaceholder": "譯文",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "每行一個條目。使用： source = target。沒有 '=' 的行將被忽略。",
+    "glossaryAdd": "新增條目",
+    "glossaryRemove": "移除條目",
+    "glossaryViewRows": "列表",
+    "glossaryViewSource": "原始碼",
+    "glossaryApply": "套用"
   }
 }

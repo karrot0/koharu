@@ -1,6 +1,8 @@
 {
   "common": {
-    "initializing": "Инициализация..."
+    "initializing": "Инициализация...",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить"
   },
   "menu": {
     "file": "Файл",
@@ -335,6 +337,18 @@
     "ocr": "OCR",
     "translator": "Переводчик",
     "inpainter": "Инпейнтер",
-    "renderer": "Рендерер"
+    "renderer": "Рендерер",
+    "glossary": "Глоссарий",
+    "glossaryDescription": "Определите пары терминов для обеспечения согласованности переводов. Глоссарий добавляется в системный промт, чтобы модель использовала вашу предпочтительную терминологию.",
+    "glossaryEmpty": "Пока нет записей. Добавьте пару терминов ниже.",
+    "glossarySourcePlaceholder": "Исходный термин",
+    "glossaryTargetPlaceholder": "Перевод",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "Одна запись на строку. Используйте: source = target. Строки без '=' игнорируются.",
+    "glossaryAdd": "Добавить запись",
+    "glossaryRemove": "Удалить запись",
+    "glossaryViewRows": "Строки",
+    "glossaryViewSource": "Источник",
+    "glossaryApply": "Применить"
   }
 }

@@ -7,7 +7,7 @@ import { Languages, LoaderCircleIcon, Trash2Icon } from 'lucide-react'
 import { useTextBlocks } from '@/hooks/useTextBlocks'
 import { useGetLlm } from '@/lib/api/llm/llm'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
-import { usePreferencesStore } from '@/lib/stores/preferencesStore'
+import { usePreferencesStore, buildSystemPromptWithGlossary } from '@/lib/stores/preferencesStore'
 import { useProcessing } from '@/lib/machines'
 import {
   Accordion,
@@ -56,14 +56,14 @@ export function TextBlocksPanel() {
     const selectedLanguage = useEditorUiStore.getState().selectedLanguage
     const textBlockId = document.textBlocks[blockIndex]?.id
     const { renderEffect, renderStroke } = useEditorUiStore.getState()
-    const { customSystemPrompt } = usePreferencesStore.getState()
+    const { customSystemPrompt, glossary } = usePreferencesStore.getState()
     send({
       type: 'START_TRANSLATE_BLOCK',
       documentId,
       options: {
         textBlockId,
         language: selectedLanguage,
-        systemPrompt: customSystemPrompt,
+        systemPrompt: buildSystemPromptWithGlossary(customSystemPrompt, glossary),
       },
       renderOptions: {
         shaderEffect: renderEffect,

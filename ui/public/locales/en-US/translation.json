@@ -337,6 +337,18 @@
     "ocr": "OCR",
     "translator": "Translator",
     "inpainter": "Inpainter",
-    "renderer": "Renderer"
+    "renderer": "Renderer",
+    "glossary": "Glossary",
+    "glossaryDescription": "Define term pairs to ensure consistent translations. The glossary is appended to the system prompt so the model uses your preferred terminology.",
+    "glossaryEmpty": "No entries yet. Add a term pair below.",
+    "glossarySourcePlaceholder": "Original term",
+    "glossaryTargetPlaceholder": "Translation",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "One entry per line. Use: source = target. Lines without '=' are ignored.",
+    "glossaryAdd": "Add entry",
+    "glossaryRemove": "Remove entry",
+    "glossaryViewRows": "Rows",
+    "glossaryViewSource": "Source",
+    "glossaryApply": "Apply"
   }
 }

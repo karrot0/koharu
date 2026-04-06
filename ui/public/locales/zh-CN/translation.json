@@ -1,6 +1,8 @@
 {
   "common": {
-    "initializing": "初始化中..."
+    "initializing": "初始化中...",
+    "cancel": "取消",
+    "confirm": "确认"
   },
   "menu": {
     "file": "文件",
@@ -335,6 +337,18 @@
     "ocr": "OCR",
     "translator": "翻译器",
     "inpainter": "修补器",
-    "renderer": "渲染器"
+    "renderer": "渲染器",
+    "glossary": "词汇表",
+    "glossaryDescription": "定义术语对以确保翻译的一致性。词汇表将附加到系统提示中，使模型使用您首选的术语。",
+    "glossaryEmpty": "暂无条目，请在下方添加术语对。",
+    "glossarySourcePlaceholder": "原始术语",
+    "glossaryTargetPlaceholder": "译文",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "每行一个条目。使用：source = target。没有 '=' 的行将被忽略。",
+    "glossaryAdd": "添加条目",
+    "glossaryRemove": "删除条目",
+    "glossaryViewRows": "列表",
+    "glossaryViewSource": "源码",
+    "glossaryApply": "应用"
   }
 }

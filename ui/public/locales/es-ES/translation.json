@@ -1,6 +1,8 @@
 {
   "common": {
-    "initializing": "Inicializando..."
+    "initializing": "Inicializando...",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "menu": {
     "file": "Archivo",
@@ -335,6 +337,18 @@
     "ocr": "OCR",
     "translator": "Traductor",
     "inpainter": "Inpainter",
-    "renderer": "Renderizador"
+    "renderer": "Renderizador",
+    "glossary": "Glosario",
+    "glossaryDescription": "Define pares de términos para asegurar traducciones consistentes. El glosario se agrega al prompt del sistema para que el modelo use tu terminología preferida.",
+    "glossaryEmpty": "Aún no hay entradas. Agrega un par de términos abajo.",
+    "glossarySourcePlaceholder": "Término original",
+    "glossaryTargetPlaceholder": "Traducción",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "Una entrada por línea. Usa: source = target. Las líneas sin '=' se ignoran.",
+    "glossaryAdd": "Agregar entrada",
+    "glossaryRemove": "Eliminar entrada",
+    "glossaryViewRows": "Filas",
+    "glossaryViewSource": "Código",
+    "glossaryApply": "Aplicar"
   }
 }

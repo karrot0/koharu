@@ -16,6 +16,11 @@ import {
   HardDriveIcon,
   InfoIcon,
   CpuIcon,
+  BookOpenIcon,
+  PlusIcon,
+  Trash2Icon,
+  Rows3Icon,
+  Code2Icon,
 } from 'lucide-react'
 import {
   Dialog,
@@ -57,6 +62,10 @@ import {
 } from '@/lib/api/system/system'
 import { getLlmCatalog, getGetLlmCatalogQueryKey } from '@/lib/api/llm/llm'
 import { supportedLanguages } from '@/lib/i18n'
+import {
+  usePreferencesStore,
+  type GlossaryEntry,
+} from '@/lib/stores/preferencesStore'
 import type {
   UpdateConfigBody,
   ProviderConfig,
@@ -72,6 +81,7 @@ const TABS = [
   { id: 'appearance', icon: PaletteIcon, labelKey: 'settings.appearance' },
   { id: 'engines', icon: CpuIcon, labelKey: 'settings.engines' },
   { id: 'providers', icon: KeyIcon, labelKey: 'settings.apiKeys' },
+  { id: 'glossary', icon: BookOpenIcon, labelKey: 'settings.glossary' },
   { id: 'runtime', icon: HardDriveIcon, labelKey: 'settings.runtime' },
   { id: 'about', icon: InfoIcon, labelKey: 'settings.about' },
 ] as const
@@ -377,6 +387,7 @@ export function SettingsDialog({
                   onApply={() => void handleApplyStorageSettings()}
                 />
               )}
+              {tab === 'glossary' && <GlossaryPane />}
               {tab === 'about' && (
                 <AboutPane
                   version={appVersion}
@@ -878,6 +889,224 @@ function AboutPane({
           </InfoRow>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Glossary ──────────────────────────────────────────────────────
+
+function GlossaryPane() {
+  const { t } = useTranslation()
+  const { glossary, addGlossaryEntry, updateGlossaryEntry, removeGlossaryEntry } =
+    usePreferencesStore()
+  const [newSource, setNewSource] = useState('')
+  const [newTarget, setNewTarget] = useState('')
+  const [viewMode, setViewMode] = useState<'rows' | 'source'>('rows')
+
+  // Source-mode state: editable plain text (source = target per line)
+  const [sourceText, setSourceText] = useState('')
+  const [sourceError, setSourceError] = useState<string | null>(null)
+
+  const enterSource = () => {
+    setSourceText(
+      glossary.map(({ source, target }) => `${source} = ${target}`).join('\n')
+    )
+    setSourceError(null)
+    setViewMode('source')
+  }
+
+  const applySource = () => {
+    const lines = sourceText.split(/\r?\n/)
+    const incoming: { source: string; target: string }[] = []
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      const eq = trimmed.indexOf('=')
+      if (eq === -1) continue
+      const src = trimmed.slice(0, eq).trim()
+      const tgt = trimmed.slice(eq + 1).trim()
+      if (src && tgt) incoming.push({ source: src, target: tgt })
+    }
+    if (incoming.length === 0) {
+      setSourceError(t('settings.glossarySourceFormatHelp'))
+      return
+    }
+    for (const entry of [...glossary]) {
+      const match = incoming.find((e) => e.source === entry.source)
+      if (!match) removeGlossaryEntry(entry.id)
+    }
+    for (const item of incoming) {
+      const existing = glossary.find((e) => e.source === item.source)
+      if (existing) {
+        if (existing.target !== item.target)
+          updateGlossaryEntry(existing.id, item.source, item.target)
+      } else {
+        addGlossaryEntry(item.source, item.target)
+      }
+    }
+    setSourceError(null)
+    setViewMode('rows')
+  }
+
+  const handleAdd = () => {
+    const src = newSource.trim()
+    const tgt = newTarget.trim()
+    if (!src || !tgt) return
+    addGlossaryEntry(src, tgt)
+    setNewSource('')
+    setNewTarget('')
+  }
+
+  return (
+    <div className='space-y-6'>
+      <Section
+        title={t('settings.glossary')}
+        description={t('settings.glossaryDescription')}
+      >
+        {/* View-mode toggle */}
+        <div className='flex justify-end'>
+          <div className='border-border bg-muted flex items-center rounded-md border p-0.5'>
+            <button
+              onClick={() => setViewMode('rows')}
+              data-active={viewMode === 'rows'}
+              className='data-[active=true]:bg-background data-[active=true]:text-foreground text-muted-foreground flex items-center gap-1.5 rounded px-2 py-1 text-xs transition'
+              title={t('settings.glossaryViewRows')}
+            >
+              <Rows3Icon className='size-3.5' />
+              {t('settings.glossaryViewRows')}
+            </button>
+            <button
+              onClick={viewMode === 'source' ? undefined : enterSource}
+              data-active={viewMode === 'source'}
+              className='data-[active=true]:bg-background data-[active=true]:text-foreground text-muted-foreground flex items-center gap-1.5 rounded px-2 py-1 text-xs transition'
+              title={t('settings.glossaryViewSource')}
+            >
+              <Code2Icon className='size-3.5' />
+              {t('settings.glossaryViewSource')}
+            </button>
+          </div>
+        </div>
+
+        {viewMode === 'rows' ? (
+          <>
+            <div className='space-y-2'>
+              {glossary.length === 0 && (
+                <p className='text-muted-foreground text-xs'>
+                  {t('settings.glossaryEmpty')}
+                </p>
+              )}
+              {glossary.map((entry) => (
+                <GlossaryRow
+                  key={entry.id}
+                  entry={entry}
+                  onUpdate={(src, tgt) => updateGlossaryEntry(entry.id, src, tgt)}
+                  onRemove={() => removeGlossaryEntry(entry.id)}
+                />
+              ))}
+            </div>
+
+            {/* Add new entry */}
+            <div className='flex items-center gap-2 pt-1'>
+              <Input
+                value={newSource}
+                onChange={(e) => setNewSource(e.target.value)}
+                placeholder={t('settings.glossarySourcePlaceholder')}
+                className='flex-1 text-sm'
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              />
+              <span className='text-muted-foreground shrink-0 text-sm'>→</span>
+              <Input
+                value={newTarget}
+                onChange={(e) => setNewTarget(e.target.value)}
+                placeholder={t('settings.glossaryTargetPlaceholder')}
+                className='flex-1 text-sm'
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              />
+              <Button
+                size='icon'
+                variant='outline'
+                onClick={handleAdd}
+                disabled={!newSource.trim() || !newTarget.trim()}
+                title={t('settings.glossaryAdd')}
+              >
+                <PlusIcon className='size-4' />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className='space-y-2'>
+            <textarea
+              value={sourceText}
+              onChange={(e) => {
+                setSourceText(e.target.value)
+                setSourceError(null)
+              }}
+              className='border-border bg-muted font-mono text-foreground focus:ring-ring w-full resize-y rounded-md border px-3 py-2 text-xs focus:outline-none focus:ring-1'
+              rows={10}
+              spellCheck={false}
+              placeholder={t('settings.glossarySourceFormatPlaceholder')}
+            />
+            {sourceError && (
+              <p className='text-destructive text-xs'>{sourceError}</p>
+            )}
+            <Button size='sm' onClick={applySource}>
+              {t('settings.glossaryApply')}
+            </Button>
+            <p className='text-muted-foreground text-xs'>
+              {t('settings.glossarySourceFormatHelp')}
+            </p>
+          </div>
+        )}
+      </Section>
+    </div>
+  )
+}
+
+function GlossaryRow({
+  entry,
+  onUpdate,
+  onRemove,
+}: {
+  entry: GlossaryEntry
+  onUpdate: (source: string, target: string) => void
+  onRemove: () => void
+}) {
+  const { t } = useTranslation()
+  const [source, setSource] = useState(entry.source)
+  const [target, setTarget] = useState(entry.target)
+
+  const handleBlur = () => {
+    const src = source.trim()
+    const tgt = target.trim()
+    if (src && tgt && (src !== entry.source || tgt !== entry.target)) {
+      onUpdate(src, tgt)
+    }
+  }
+
+  return (
+    <div className='flex items-center gap-2'>
+      <Input
+        value={source}
+        onChange={(e) => setSource(e.target.value)}
+        onBlur={handleBlur}
+        className='flex-1 text-sm'
+      />
+      <span className='text-muted-foreground shrink-0 text-sm'>→</span>
+      <Input
+        value={target}
+        onChange={(e) => setTarget(e.target.value)}
+        onBlur={handleBlur}
+        className='flex-1 text-sm'
+      />
+      <Button
+        size='icon'
+        variant='ghost'
+        onClick={onRemove}
+        title={t('settings.glossaryRemove')}
+        className='text-muted-foreground hover:text-destructive shrink-0'
+      >
+        <Trash2Icon className='size-4' />
+      </Button>
     </div>
   )
 }

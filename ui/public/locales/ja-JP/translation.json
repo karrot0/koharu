@@ -1,6 +1,8 @@
 {
   "common": {
-    "initializing": "初期化中..."
+    "initializing": "初期化中...",
+    "cancel": "キャンセル",
+    "confirm": "確認"
   },
   "menu": {
     "file": "ファイル",
@@ -335,6 +337,18 @@
     "ocr": "OCR",
     "translator": "翻訳器",
     "inpainter": "インペインター",
-    "renderer": "レンダラー"
+    "renderer": "レンダラー",
+    "glossary": "用語集",
+    "glossaryDescription": "用語のペアを定義して、一貫した翻訳を確保します。用語集はシステムプロンプトに追加されるため、モデルはあなたの好みの用語を使用します。",
+    "glossaryEmpty": "まだエントリがありません。下に用語のペアを追加してください。",
+    "glossarySourcePlaceholder": "元の用語",
+    "glossaryTargetPlaceholder": "翻訳",
+    "glossarySourceFormatPlaceholder": "term1 = translation1\nterm2 = translation2",
+    "glossarySourceFormatHelp": "1 行に 1 つのエントリ。使用法: source = target。'=' を含まない行は無視されます。",
+    "glossaryAdd": "エントリを追加",
+    "glossaryRemove": "エントリを削除",
+    "glossaryViewRows": "行",
+    "glossaryViewSource": "ソース",
+    "glossaryApply": "適用"
   }
 }
