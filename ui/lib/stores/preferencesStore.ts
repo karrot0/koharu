@@ -13,18 +13,24 @@ export function buildSystemPromptWithGlossary(
   customSystemPrompt: string | undefined,
   glossary: GlossaryEntry[],
 ): string | undefined {
-  const activeGlossary = glossary.filter(
-    (e) => e.source.trim() && e.target.trim(),
-  )
-  if (activeGlossary.length === 0) return customSystemPrompt || undefined
+  const trimmedCustomSystemPrompt = customSystemPrompt?.trim()
+  const activeGlossary = glossary
+    .map((e) => ({
+      ...e,
+      source: e.source.trim(),
+      target: e.target.trim(),
+    }))
+    .filter((e) => e.source && e.target)
+
+  if (activeGlossary.length === 0) return trimmedCustomSystemPrompt || undefined
 
   const glossarySection =
     'Use the following terminology glossary for consistent translations:\n' +
     activeGlossary.map((e) => `- ${e.source} → ${e.target}`).join('\n')
 
-  if (!customSystemPrompt?.trim()) return glossarySection
+  if (!trimmedCustomSystemPrompt) return glossarySection
 
-  return `${customSystemPrompt.trim()}\n\n${glossarySection}`
+  return `${trimmedCustomSystemPrompt}\n\n${glossarySection}`
 }
 
 type PreferencesState = {

@@ -917,7 +917,8 @@ function GlossaryPane() {
 
   const applySource = () => {
     const lines = sourceText.split(/\r?\n/)
-    const incoming: { source: string; target: string }[] = []
+    // Deduplicate by source (last one wins)
+    const seen = new Map<string, string>()
     for (const line of lines) {
       const trimmed = line.trim()
       if (!trimmed) continue
@@ -925,12 +926,10 @@ function GlossaryPane() {
       if (eq === -1) continue
       const src = trimmed.slice(0, eq).trim()
       const tgt = trimmed.slice(eq + 1).trim()
-      if (src && tgt) incoming.push({ source: src, target: tgt })
+      if (src && tgt) seen.set(src, tgt)
     }
-    if (incoming.length === 0) {
-      setSourceError(t('settings.glossarySourceFormatHelp'))
-      return
-    }
+    const incoming = Array.from(seen.entries()).map(([source, target]) => ({ source, target }))
+    // Empty textarea clears all entries
     for (const entry of [...glossary]) {
       const match = incoming.find((e) => e.source === entry.source)
       if (!match) removeGlossaryEntry(entry.id)
@@ -952,7 +951,13 @@ function GlossaryPane() {
     const src = newSource.trim()
     const tgt = newTarget.trim()
     if (!src || !tgt) return
-    addGlossaryEntry(src, tgt)
+    // Enforce unique source: update existing entry instead of duplicating
+    const existing = glossary.find((e) => e.source === src)
+    if (existing) {
+      updateGlossaryEntry(existing.id, src, tgt)
+    } else {
+      addGlossaryEntry(src, tgt)
+    }
     setNewSource('')
     setNewTarget('')
   }
@@ -1074,6 +1079,10 @@ function GlossaryRow({
   const { t } = useTranslation()
   const [source, setSource] = useState(entry.source)
   const [target, setTarget] = useState(entry.target)
+
+  // Sync local state when entry is updated externally (e.g. from source view)
+  useEffect(() => { setSource(entry.source) }, [entry.source])
+  useEffect(() => { setTarget(entry.target) }, [entry.target])
 
   const handleBlur = () => {
     const src = source.trim()

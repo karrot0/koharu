@@ -28,7 +28,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
-import { usePreferencesStore } from '@/lib/stores/preferencesStore'
+import { usePreferencesStore, buildSystemPromptWithGlossary } from '@/lib/stores/preferencesStore'
 import { useGetLlm, useGetLlmCatalog } from '@/lib/api/llm/llm'
 import type {
   LlmCatalog,
@@ -126,13 +126,13 @@ function WorkflowButtons() {
         onClick={() => {
           const documentId = requireDocumentId()
           const selectedLanguage = useEditorUiStore.getState().selectedLanguage
-          const { customSystemPrompt } = usePreferencesStore.getState()
+          const { customSystemPrompt, glossary } = usePreferencesStore.getState()
           send({
             type: 'START_TRANSLATE',
             documentId,
             options: {
               language: selectedLanguage,
-              systemPrompt: customSystemPrompt,
+              systemPrompt: buildSystemPromptWithGlossary(customSystemPrompt, glossary),
             },
           })
         }}
