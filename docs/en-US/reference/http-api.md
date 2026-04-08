@@ -131,6 +131,14 @@ Useful request details:
 - `PUT /llm` accepts `target` plus optional `options { temperature, maxTokens, customSystemPrompt }`
 - provider targets use `{ kind: "provider", providerId, modelId }`; local targets use `{ kind: "local", modelId }`
 
+## Model Unloading
+
+| Method   | Path               | Purpose                                      |
+| -------- | ------------------ | -------------------------------------------- |
+| `DELETE` | `/engines/detect`  | unloads detector + segmenter + font detector |
+| `DELETE` | `/engines/ocr`     | unloads ocr                                  |
+| `DELETE` | `/engines/inpaint` | unloads inpaint                              |
+
 ## Provider configuration
 
 Provider and runtime settings now live under `GET /config` and `PUT /config`.
