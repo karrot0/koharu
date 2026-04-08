@@ -218,6 +218,14 @@ impl Registry {
         self.models.write().await.clear();
     }
 
+    /// Remove specific engines from the cache by ID, freeing their resources.
+    pub async fn evict(&self, ids: &[&str]) {
+        let mut engines = self.engines.write().await;
+        for id in ids {
+            engines.remove(*id);
+        }
+    }
+
     /// Find engine descriptor by id.
     pub fn find(id: &str) -> Result<&'static EngineInfo> {
         Self::catalog()

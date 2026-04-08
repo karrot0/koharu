@@ -59,6 +59,9 @@ pub fn api() -> (axum::Router<ApiState>, utoipa::openapi::OpenApi) {
         .routes(routes!(batch_export))
         .routes(routes!(get_llm, load_llm, unload_llm))
         .routes(routes!(get_llm_catalog))
+        .routes(routes!(unload_detect))
+        .routes(routes!(unload_ocr))
+        .routes(routes!(unload_inpaint))
         .routes(routes!(start_pipeline))
         .routes(routes!(list_jobs))
         .routes(routes!(get_job, cancel_job))
@@ -1136,6 +1139,69 @@ async fn unload_llm(State(state): State<ApiState>) -> ApiResult<Json<LlmState>> 
     let resources = state.resources()?;
     llm::llm_offload(resources.clone()).await?;
     Ok(Json(resources.llm.snapshot().await))
+}
+
+// ---------------------------------------------------------------------------
+// Engine unload
+// ---------------------------------------------------------------------------
+
+#[utoipa::path(
+    delete,
+    path = "/engines/detect",
+    operation_id = "unloadDetect",
+    tag = "system",
+    responses(
+        (status = 204),
+        (status = 503, body = ApiError),
+    ),
+)]
+#[tracing::instrument(level = "info", skip_all)]
+async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
+    let resources = state.resources()?;
+    let pipeline = resources.config.read().await.pipeline.clone();
+    let detector = pipeline.detector.clone();
+    let segmenter = pipeline.segmenter.clone();
+    resources
+        .registry
+        .evict(&[detector.as_str(), segmenter.as_str(), "yuzumarker-font-detection"])
+        .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    delete,
+    path = "/engines/ocr",
+    operation_id = "unloadOcr",
+    tag = "system",
+    responses(
+        (status = 204),
+        (status = 503, body = ApiError),
+    ),
+)]
+#[tracing::instrument(level = "info", skip_all)]
+async fn unload_ocr(State(state): State<ApiState>) -> ApiResult<StatusCode> {
+    let resources = state.resources()?;
+    let ocr = resources.config.read().await.pipeline.ocr.clone();
+    resources.registry.evict(&[ocr.as_str()]).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    delete,
+    path = "/engines/inpaint",
+    operation_id = "unloadInpaint",
+    tag = "system",
+    responses(
+        (status = 204),
+        (status = 503, body = ApiError),
+    ),
+)]
+#[tracing::instrument(level = "info", skip_all)]
+async fn unload_inpaint(State(state): State<ApiState>) -> ApiResult<StatusCode> {
+    let resources = state.resources()?;
+    let inpainter = resources.config.read().await.pipeline.inpainter.clone();
+    resources.registry.evict(&[inpainter.as_str()]).await;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------------------------------------------------------------------------
