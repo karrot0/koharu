@@ -53,7 +53,8 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { isTauri } from '@/lib/backend'
+import { useUpdater, type UpdaterStatus } from '@/components/Updater'
+import { isTauri, openExternalUrl } from '@/lib/backend'
 import {
   getConfig,
   getEngineCatalog,
@@ -74,8 +75,6 @@ import type {
 } from '@/lib/api/schemas'
 
 const GITHUB_REPO = 'mayocream/koharu'
-
-type VersionStatus = 'loading' | 'latest' | 'outdated' | 'error'
 
 const TABS = [
   { id: 'appearance', icon: PaletteIcon, labelKey: 'settings.appearance' },
@@ -126,8 +125,7 @@ export function SettingsDialog({
   const [engineCatalog, setEngineCatalog] =
     useState<GetEngineCatalog200 | null>(null)
   const [appVersion, setAppVersion] = useState<string>()
-  const [latestVersion, setLatestVersion] = useState<string>()
-  const [versionStatus, setVersionStatus] = useState<VersionStatus>('loading')
+  const updater = useUpdater()
 
   useEffect(() => {
     if (!open) return
@@ -147,23 +145,24 @@ export function SettingsDialog({
 
   useEffect(() => {
     if (!open) return
+    let cancelled = false
     void (async () => {
       try {
         const meta = await getMeta()
+        if (cancelled) return
         setAppVersion(meta.version)
-        const res = await fetch(
-          `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
-        )
-        if (res.ok) {
-          const data = await res.json()
-          const latest = data.tag_name?.replace(/^v/, '') || data.name
-          setLatestVersion(latest)
-          setVersionStatus(meta.version === latest ? 'latest' : 'outdated')
-        } else setVersionStatus('error')
       } catch {
-        setVersionStatus('error')
+        return
       }
     })()
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || !isTauri()) return
+    void updater.checkForUpdates()
   }, [open])
 
   useEffect(() => {
@@ -391,8 +390,10 @@ export function SettingsDialog({
               {tab === 'about' && (
                 <AboutPane
                   version={appVersion}
-                  latestVersion={latestVersion}
-                  status={versionStatus}
+                  latestVersion={updater.latestVersion}
+                  status={updater.status}
+                  isInstallingUpdate={updater.isInstalling}
+                  onInstallUpdate={() => void updater.installUpdate()}
                 />
               )}
             </div>
@@ -812,14 +813,16 @@ function AboutPane({
   version,
   latestVersion,
   status,
+  isInstallingUpdate,
+  onInstallUpdate,
 }: {
   version?: string
   latestVersion?: string
-  status: VersionStatus
+  status: UpdaterStatus
+  isInstallingUpdate: boolean
+  onInstallUpdate: () => void
 }) {
   const { t } = useTranslation()
-  const open = (url: string) =>
-    window.open(url, '_blank', 'noopener,noreferrer')
 
   return (
     <div className='flex h-full flex-col items-center justify-center gap-5 py-8'>
@@ -858,12 +861,15 @@ function AboutPane({
                 <Button
                   variant='link'
                   size='xs'
-                  onClick={() =>
-                    open(`https://github.com/${GITHUB_REPO}/releases/latest`)
-                  }
+                  onClick={onInstallUpdate}
+                  disabled={isInstallingUpdate}
                   className='h-auto gap-1 p-0 text-amber-500'
                 >
-                  <AlertCircleIcon className='size-3.5' />
+                  {isInstallingUpdate ? (
+                    <LoaderIcon className='size-3.5 animate-spin' />
+                  ) : (
+                    <AlertCircleIcon className='size-3.5' />
+                  )}
                   {t('settings.aboutUpdate', { version: latestVersion })}
                 </Button>
               )}
@@ -873,7 +879,9 @@ function AboutPane({
             <Button
               variant='link'
               size='xs'
-              onClick={() => open('https://github.com/mayocream')}
+              onClick={() =>
+                void openExternalUrl('https://github.com/mayocream')
+              }
             >
               Mayo
             </Button>
@@ -882,7 +890,9 @@ function AboutPane({
             <Button
               variant='link'
               size='xs'
-              onClick={() => open(`https://github.com/${GITHUB_REPO}`)}
+              onClick={() =>
+                void openExternalUrl(`https://github.com/${GITHUB_REPO}`)
+              }
             >
               GitHub
             </Button>

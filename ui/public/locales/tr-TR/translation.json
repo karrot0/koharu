@@ -350,5 +350,24 @@
     "glossaryViewRows": "Satırlar",
     "glossaryViewSource": "Kaynak",
     "glossaryApply": "Uygula"
+  },
+  "updater": {
+    "available": {
+      "title": "Güncelleme mevcut",
+      "description": "Koharu <strong>{{version}}</strong> yüklenmeye hazır"
+    },
+    "noNotes": "Sürüm notu sağlanmadı.",
+    "later": "Daha sonra",
+    "update": "Güncelle",
+    "downloading": {
+      "title": "Güncelleme indiriliyor…",
+      "subtitle": "Koharu {{version}}"
+    },
+    "error": {
+      "title": "Güncelleme başarısız",
+      "description": "Güncelleme sırasında bir hata oluştu"
+    },
+    "close": "Kapat",
+    "retry": "Tekrar dene"
   }
 }
