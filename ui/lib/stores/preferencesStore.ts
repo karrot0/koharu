@@ -47,6 +47,7 @@ type PreferencesState = {
   addGlossaryEntry: (source: string, target: string) => void
   updateGlossaryEntry: (id: string, source: string, target: string) => void
   removeGlossaryEntry: (id: string) => void
+  setGlossary: (entries: Omit<GlossaryEntry, 'id'>[]) => void
   resetPreferences: () => void
 }
 
@@ -88,6 +89,10 @@ export const usePreferencesStore = create<PreferencesState>()(
         set((state) => ({
           glossary: state.glossary.filter((entry) => entry.id !== id),
         })),
+      setGlossary: (entries) =>
+        set({
+          glossary: entries.map((e) => ({ id: crypto.randomUUID(), source: e.source, target: e.target })),
+        }),
       resetPreferences: () => set({ ...initialPreferences }),
     }),
     {

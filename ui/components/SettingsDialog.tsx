@@ -895,55 +895,79 @@ function AboutPane({
 
 // ── Glossary ──────────────────────────────────────────────────────
 
+const csvEscapeField = (v: string) =>
+  v.includes(',') || v.includes('"') || v.includes('\n')
+    ? `"${v.replace(/"/g, '""')}"`
+    : v
+
+const serializeGlossaryToCsv = (entries: GlossaryEntry[]) =>
+  entries.map(({ source, target }) => `${csvEscapeField(source)},${csvEscapeField(target)}`).join('\n')
+
+function parseCsvLine(line: string): string[] | null {
+  if (!line.trim()) return null
+  const fields: string[] = []
+  let i = 0
+  while (i <= line.length) {
+    if (line[i] === '"') {
+      let field = ''
+      i++
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') {
+          field += '"'
+          i += 2
+        } else if (line[i] === '"') {
+          i++
+          break
+        } else {
+          field += line[i++]
+        }
+      }
+      fields.push(field)
+      if (line[i] === ',') i++
+    } else {
+      const end = line.indexOf(',', i)
+      if (end === -1) {
+        fields.push(line.slice(i).trim())
+        break
+      } else {
+        fields.push(line.slice(i, end).trim())
+        i = end + 1
+      }
+    }
+  }
+  return fields
+}
+
+function parseGlossaryCsv(text: string): Array<{ source: string; target: string }> {
+  const seen = new Map<string, string>()
+  for (const line of text.split(/\r?\n/)) {
+    const fields = parseCsvLine(line)
+    if (!fields || fields.length < 2) continue
+    const src = fields[0].trim()
+    const tgt = fields[1].trim()
+    if (src && tgt) seen.set(src, tgt)
+  }
+  return Array.from(seen.entries()).map(([source, target]) => ({ source, target }))
+}
+
 function GlossaryPane() {
   const { t } = useTranslation()
-  const { glossary, addGlossaryEntry, updateGlossaryEntry, removeGlossaryEntry } =
+  const { glossary, addGlossaryEntry, updateGlossaryEntry, setGlossary } =
     usePreferencesStore()
   const [newSource, setNewSource] = useState('')
   const [newTarget, setNewTarget] = useState('')
   const [viewMode, setViewMode] = useState<'rows' | 'source'>('rows')
 
-  // Source-mode state: editable plain text (source = target per line)
+  // CSV source-mode state
   const [sourceText, setSourceText] = useState('')
-  const [sourceError, setSourceError] = useState<string | null>(null)
 
   const enterSource = () => {
-    setSourceText(
-      glossary.map(({ source, target }) => `${source} = ${target}`).join('\n')
-    )
-    setSourceError(null)
+    setSourceText(serializeGlossaryToCsv(glossary))
     setViewMode('source')
   }
 
   const applySource = () => {
-    const lines = sourceText.split(/\r?\n/)
-    // Deduplicate by source (last one wins)
-    const seen = new Map<string, string>()
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-      const eq = trimmed.indexOf('=')
-      if (eq === -1) continue
-      const src = trimmed.slice(0, eq).trim()
-      const tgt = trimmed.slice(eq + 1).trim()
-      if (src && tgt) seen.set(src, tgt)
-    }
-    const incoming = Array.from(seen.entries()).map(([source, target]) => ({ source, target }))
-    // Empty textarea clears all entries
-    for (const entry of [...glossary]) {
-      const match = incoming.find((e) => e.source === entry.source)
-      if (!match) removeGlossaryEntry(entry.id)
-    }
-    for (const item of incoming) {
-      const existing = glossary.find((e) => e.source === item.source)
-      if (existing) {
-        if (existing.target !== item.target)
-          updateGlossaryEntry(existing.id, item.source, item.target)
-      } else {
-        addGlossaryEntry(item.source, item.target)
-      }
-    }
-    setSourceError(null)
+    setGlossary(parseGlossaryCsv(sourceText))
     setViewMode('rows')
   }
 
@@ -1005,7 +1029,7 @@ function GlossaryPane() {
                   key={entry.id}
                   entry={entry}
                   onUpdate={(src, tgt) => updateGlossaryEntry(entry.id, src, tgt)}
-                  onRemove={() => removeGlossaryEntry(entry.id)}
+                  onRemove={() => setGlossary(glossary.filter((e) => e.id !== entry.id))}
                 />
               ))}
             </div>
@@ -1042,18 +1066,12 @@ function GlossaryPane() {
           <div className='space-y-2'>
             <textarea
               value={sourceText}
-              onChange={(e) => {
-                setSourceText(e.target.value)
-                setSourceError(null)
-              }}
+              onChange={(e) => setSourceText(e.target.value)}
               className='border-border bg-muted font-mono text-foreground focus:ring-ring w-full resize-y rounded-md border px-3 py-2 text-xs focus:outline-none focus:ring-1'
               rows={10}
               spellCheck={false}
               placeholder={t('settings.glossarySourceFormatPlaceholder')}
             />
-            {sourceError && (
-              <p className='text-destructive text-xs'>{sourceError}</p>
-            )}
             <Button size='sm' onClick={applySource}>
               {t('settings.glossaryApply')}
             </Button>
