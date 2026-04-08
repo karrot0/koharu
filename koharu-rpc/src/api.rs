@@ -1163,12 +1163,13 @@ async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
     let bubble_detector = pipeline.bubble_detector.clone();
     let segmenter = pipeline.segmenter.clone();
     resources
+    let font_detector = pipeline.font_detector.clone();
+    resources
         .registry
         .evict(&[
             detector.as_str(),
-            bubble_detector.as_str(),
             segmenter.as_str(),
-            "yuzumarker-font-detection",
+            font_detector.as_str(),
         ])
         .await;
     Ok(StatusCode::NO_CONTENT)
