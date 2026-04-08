@@ -1163,7 +1163,11 @@ async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
     let segmenter = pipeline.segmenter.clone();
     resources
         .registry
-        .evict(&[detector.as_str(), segmenter.as_str(), "yuzumarker-font-detection"])
+        .evict(&[
+            detector.as_str(),
+            segmenter.as_str(),
+            "yuzumarker-font-detection",
+        ])
         .await;
     Ok(StatusCode::NO_CONTENT)
 }
