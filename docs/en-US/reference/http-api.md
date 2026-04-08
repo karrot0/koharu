@@ -133,11 +133,9 @@ Useful request details:
 
 ## Model Unloading
 
-| Method   | Path               | Purpose                                      |
-| -------- | ------------------ | -------------------------------------------- |
-| `DELETE` | `/engines/detect`  | unloads detector + segmenter + font detector |
-| `DELETE` | `/engines/ocr`     | unloads ocr                                  |
-| `DELETE` | `/engines/inpaint` | unloads inpaint                              |
+| Method   | Path                                          | Purpose                                      |
+| -------- | --------------------------------------------- | -------------------------------------------- |
+| `DELETE` | `/unload?engine={ocr,detect,llm,inpaint,all}` | unload engine                                |
 
 ## Provider configuration
 

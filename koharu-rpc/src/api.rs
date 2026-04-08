@@ -59,9 +59,7 @@ pub fn api() -> (axum::Router<ApiState>, utoipa::openapi::OpenApi) {
         .routes(routes!(batch_export))
         .routes(routes!(get_llm, load_llm, unload_llm))
         .routes(routes!(get_llm_catalog))
-        .routes(routes!(unload_detect))
-        .routes(routes!(unload_ocr))
-        .routes(routes!(unload_inpaint))
+        .routes(routes!(unload_engine))
         .routes(routes!(start_pipeline))
         .routes(routes!(list_jobs))
         .routes(routes!(get_job, cancel_job))
@@ -1145,70 +1143,65 @@ async fn unload_llm(State(state): State<ApiState>) -> ApiResult<Json<LlmState>> 
 // Engine unload
 // ---------------------------------------------------------------------------
 
-#[utoipa::path(
-    delete,
-    path = "/engines/detect",
-    operation_id = "unloadDetect",
-    tag = "system",
-    responses(
-        (status = 204),
-        (status = 503, body = ApiError),
-    ),
-)]
-#[tracing::instrument(level = "info", skip_all)]
-async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
-    let resources = state.resources()?;
-    let pipeline = resources.config.read().await.pipeline.clone();
-    let detector = pipeline.detector.clone();
-    let bubble_detector = pipeline.bubble_detector.clone();
-    let segmenter = pipeline.segmenter.clone();
-    let font_detector = pipeline.font_detector.clone();
-    resources
-        .registry
-        .evict(&[
-            detector.as_str(),
-            segmenter.as_str(),
-            font_detector.as_str(),
-            bubble_detector.as_str(),
-        ])
-        .await;
-    Ok(StatusCode::NO_CONTENT)
+#[derive(Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+struct UnloadQuery {
+    engine: String,
 }
 
 #[utoipa::path(
     delete,
-    path = "/engines/ocr",
-    operation_id = "unloadOcr",
+    path = "/unload",
+    operation_id = "unloadEngine",
     tag = "system",
+    params(("engine" = String, Query)),
     responses(
         (status = 204),
+        (status = 400, body = ApiError),
         (status = 503, body = ApiError),
     ),
 )]
 #[tracing::instrument(level = "info", skip_all)]
-async fn unload_ocr(State(state): State<ApiState>) -> ApiResult<StatusCode> {
+async fn unload_engine(
+    State(state): State<ApiState>,
+    Query(q): Query<UnloadQuery>,
+) -> ApiResult<StatusCode> {
     let resources = state.resources()?;
-    let ocr = resources.config.read().await.pipeline.ocr.clone();
-    resources.registry.evict(&[ocr.as_str()]).await;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-#[utoipa::path(
-    delete,
-    path = "/engines/inpaint",
-    operation_id = "unloadInpaint",
-    tag = "system",
-    responses(
-        (status = 204),
-        (status = 503, body = ApiError),
-    ),
-)]
-#[tracing::instrument(level = "info", skip_all)]
-async fn unload_inpaint(State(state): State<ApiState>) -> ApiResult<StatusCode> {
-    let resources = state.resources()?;
-    let inpainter = resources.config.read().await.pipeline.inpainter.clone();
-    resources.registry.evict(&[inpainter.as_str()]).await;
-    Ok(StatusCode::NO_CONTENT)
+    let engine = q.engine.to_lowercase();
+    match engine.as_str() {
+        "detect" => {
+            let pipeline = resources.config.read().await.pipeline.clone();
+            let detector = pipeline.detector.clone();
+            let bubble_detector = pipeline.bubble_detector.clone();
+            let segmenter = pipeline.segmenter.clone();
+            let font_detector = pipeline.font_detector.clone();
+            resources
+                .registry
+                .evict(&[
+                    detector.as_str(),
+                    segmenter.as_str(),
+                    font_detector.as_str(),
+                    bubble_detector.as_str(),
+                ])
+                .await;
+            Ok(StatusCode::NO_CONTENT)
+        }
+        "ocr" => {
+            let ocr = resources.config.read().await.pipeline.ocr.clone();
+            resources.registry.evict(&[ocr.as_str()]).await;
+            Ok(StatusCode::NO_CONTENT)
+        }
+        "inpaint" => {
+            let inpainter = resources.config.read().await.pipeline.inpainter.clone();
+            resources.registry.evict(&[inpainter.as_str()]).await;
+            Ok(StatusCode::NO_CONTENT)
+        }
+        "all" => {
+            resources.registry.clear().await;
+            Ok(StatusCode::NO_CONTENT)
+        }
+        other => Err(ApiError::bad_request(format!("Unknown engine: {}", other))),
+    }
 }
 
 // ---------------------------------------------------------------------------
