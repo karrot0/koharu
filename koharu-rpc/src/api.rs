@@ -1162,7 +1162,6 @@ async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
     let detector = pipeline.detector.clone();
     let bubble_detector = pipeline.bubble_detector.clone();
     let segmenter = pipeline.segmenter.clone();
-    resources
     let font_detector = pipeline.font_detector.clone();
     resources
         .registry
@@ -1170,6 +1169,7 @@ async fn unload_detect(State(state): State<ApiState>) -> ApiResult<StatusCode> {
             detector.as_str(),
             segmenter.as_str(),
             font_detector.as_str(),
+            bubble_detector.as_str(),
         ])
         .await;
     Ok(StatusCode::NO_CONTENT)
