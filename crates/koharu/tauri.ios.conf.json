@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/1991873f5e2baa68773f21465f61baa93077498f/crates/tauri-schema-generator/schemas/config.schema.json",
-  "identifier": "rs.koharu.app",
+  "identifier": "com.karrot.koharu",
   "build": {
     "beforeDevCommand": "cargo run -p koharu-runtime --bin stage-ios-frameworks -- crates/koharu/gen/frameworks && bun run --filter @koharu/bridge build && bun run --parallel --filter @koharu/bridge --filter @koharu/app dev",
     "beforeBuildCommand": "cargo run -p koharu-runtime --bin stage-ios-frameworks -- crates/koharu/gen/frameworks && bun run --filter @koharu/bridge build && bun run --filter @koharu/app build"
