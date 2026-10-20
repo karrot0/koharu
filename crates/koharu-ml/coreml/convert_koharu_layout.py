@@ -2,11 +2,13 @@
 
 `convert` (any OS) loads the pinned checkpoint strictly, exports rfdetr's ONNX-style forward as
 an iOS 18 ML Program with the names Koharu's iOS loader reads, and records PyTorch's regular
-eval forward on a real page. `verify` (macOS only, since Core ML runs only there) runs the
-converted model on the same input and compares raw outputs and Koharu's postprocessed
-detections, then fails unless they agree.
+eval forward on a real page. On macOS, `predict.swift` runs the compiled model on the same input.
+`verify` compares those Core ML outputs with PyTorch's, raw and after Koharu's postprocessing,
+then fails unless they agree.
 
     python convert_koharu_layout.py convert --image page.jpg --out build
+    xcrun coremlcompiler compile build/koharu-layout-rfdetr-seg-2xl-1152.mlpackage build/compiled
+    ./predict build/compiled/koharu-layout-rfdetr-seg-2xl-1152.mlmodelc build/pixel_values.f32 build/core-ml
     python convert_koharu_layout.py verify --out build
 """
 
@@ -208,6 +210,7 @@ def convert(image: Path, out: Path) -> None:
     )
     package.short_description = f"{REPOSITORY}@{REVISION}"
     package.save(str(out / f"{NAME}.mlpackage"))
+    (out / "pixel_values.f32").write_bytes(pixel_values.numpy().astype("<f4").tobytes())
     np.savez_compressed(
         out / "reference.npz",
         pixel_values=pixel_values.numpy(),
@@ -219,8 +222,7 @@ def convert(image: Path, out: Path) -> None:
 def resize_bilinear(values: np.ndarray, height: int, width: int) -> np.ndarray:
     """PyTorch's bilinear interpolation with align_corners=False, without antialiasing.
 
-    Written in NumPy so the macOS verify job does not need PyTorch, which no longer ships
-    Intel macOS wheels.
+    Written in NumPy so verification does not need PyTorch.
     """
 
     def axis(size: int, target: int):
@@ -281,14 +283,14 @@ def box_iou(left, right) -> float:
 
 
 def verify(out: Path) -> None:
-    import coremltools as ct
-
     reference = np.load(out / "reference.npz")
     width, height = (int(value) for value in reference["image_size"])
-    model = ct.models.MLModel(
-        str(out / f"{NAME}.mlpackage"), compute_units=ct.ComputeUnit.ALL
-    )
-    predicted = model.predict({"pixel_values": reference["pixel_values"]})
+    core_ml = out / "core-ml"
+    shapes = json.loads((core_ml / "shapes.json").read_text())
+    predicted = {
+        name: np.fromfile(core_ml / f"{name}.f32", dtype="<f4").reshape(shape)
+        for name, shape in shapes.items()
+    }
 
     raw = {
         name: {
