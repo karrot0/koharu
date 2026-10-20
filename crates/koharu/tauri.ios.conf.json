@@ -20,7 +20,6 @@
     "iOS": {
       "minimumSystemVersion": "26.0",
       "frameworks": [
-        "gen/frameworks/koharu-torch.xcframework",
         "gen/frameworks/llama.xcframework",
         "gen/frameworks/mtmd.xcframework",
         "gen/frameworks/stable-diffusion.xcframework"

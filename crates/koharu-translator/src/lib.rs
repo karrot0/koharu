@@ -1,5 +1,6 @@
 //! Translation through local and hosted providers.
 
+mod apple;
 mod backend;
 mod error;
 mod language;
@@ -122,6 +123,8 @@ impl Translator {
                 .await?
                 .translate(request, generation)
                 .await?
+        } else if provider == Provider::Apple {
+            apple::translate(&request).await?
         } else {
             let providers = self.providers.read()?.clone();
             remote::translate(&self.client, &providers, selection, &generation, &request).await?
@@ -151,6 +154,7 @@ impl Translator {
             })
             .await?;
         let mut models = local::models();
+        models.extend(apple::models());
         models.extend(remote::models(client, &providers).await);
         Ok(models)
     }

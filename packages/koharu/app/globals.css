@@ -78,6 +78,10 @@
     @apply text-foreground select-none;
     background-color: transparent;
     overflow: hidden;
+    /* Touch screens: no rubber-band scrolling, long-press callouts, or tap flashes. */
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
     font-family: var(--font-noto-sans-cjk), ui-sans-serif, system-ui, sans-serif;
     font-feature-settings:
       'cv02' 1,
@@ -132,6 +136,12 @@
 }
 
 @layer components {
+  /* Keeps the app clear of the notch, rounded corners, and home indicator; zero on desktop. */
+  .safe-area {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
   .workspace-corner-mask {
     --workspace-corner-radius: calc(var(--radius) + 0.5rem);
     overflow: visible !important;

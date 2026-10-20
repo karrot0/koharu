@@ -31,16 +31,48 @@ impl Default for PipelineFile {
     fn default() -> Self {
         Self {
             detection: ModelSelection {
-                model: "koharu-layout-rfdetr-seg-2xl".to_owned(),
+                model: DETECTION[0].to_owned(),
             },
             ocr: ModelSelection {
-                model: "paddleocr-vl-1.6".to_owned(),
+                model: OCR[0].to_owned(),
             },
             translation: TranslationConfig::default(),
             inpainting: ModelSelection {
-                model: "lama".to_owned(),
+                model: INPAINTING[0].to_owned(),
             },
             processor: ProcessorConfig::default(),
+        }
+    }
+}
+
+const DETECTION: &[&str] = &["koharu-layout-rfdetr-seg-2xl"];
+#[cfg(not(target_os = "ios"))]
+const OCR: &[&str] = &["paddleocr-vl-1.6", "manga-ocr", "baberu-ocr", "hayai-ocr"];
+#[cfg(not(target_os = "ios"))]
+const INPAINTING: &[&str] = &["lama", "aot-inpainting", "flux2-klein", "rorem-mixed"];
+// iOS ships no Torch runtime: detection runs through Core ML, OCR through llama.cpp or Apple
+// Vision, and inpainting through stable-diffusion.cpp.
+#[cfg(target_os = "ios")]
+const OCR: &[&str] = &["paddleocr-vl-1.6", "apple-vision"];
+#[cfg(target_os = "ios")]
+const INPAINTING: &[&str] = &["rorem-mixed", "flux2-klein"];
+
+/// The processors this build can run for each stage, in display order; the first is the default.
+#[derive(Clone, Debug, Serialize, Type)]
+pub struct ProcessorCatalog {
+    pub detection: Vec<String>,
+    pub ocr: Vec<String>,
+    pub inpainting: Vec<String>,
+}
+
+impl ProcessorCatalog {
+    #[must_use]
+    pub fn current() -> Self {
+        let names = |names: &[&str]| names.iter().map(|name| (*name).to_owned()).collect();
+        Self {
+            detection: names(DETECTION),
+            ocr: names(OCR),
+            inpainting: names(INPAINTING),
         }
     }
 }
@@ -56,21 +88,9 @@ impl Serialize for PipelineConfig {
     where
         S: Serializer,
     {
-        let detection = match &self.detection {
-            DetectionModel::KoharuLayoutRFDetrSeg2XL(_) => "koharu-layout-rfdetr-seg-2xl",
-        };
-        let ocr = match &self.ocr {
-            OcrModel::PaddleOcrVl1_6 => "paddleocr-vl-1.6",
-            OcrModel::MangaOcr => "manga-ocr",
-            OcrModel::BaberuOcr => "baberu-ocr",
-            OcrModel::HayaiOcr => "hayai-ocr",
-        };
-        let inpainting = match &self.inpainting {
-            InpaintingModel::LaMa {} => "lama",
-            InpaintingModel::AotInpainting {} => "aot-inpainting",
-            InpaintingModel::Flux2Klein(_) => "flux2-klein",
-            InpaintingModel::RoremMixed(_) => "rorem-mixed",
-        };
+        let detection = self.detection.name();
+        let ocr = self.ocr.name();
+        let inpainting = self.inpainting.name();
         let mut processor = self.processor.clone();
         let DetectionModel::KoharuLayoutRFDetrSeg2XL(config) = &self.detection;
         processor
@@ -121,32 +141,9 @@ impl<'de> Deserialize<'de> for PipelineConfig {
                 )));
             }
         };
-        let ocr = match file.ocr.model.as_str() {
-            "paddleocr-vl-1.6" => OcrModel::PaddleOcrVl1_6,
-            "manga-ocr" => OcrModel::MangaOcr,
-            "baberu-ocr" => OcrModel::BaberuOcr,
-            "hayai-ocr" => OcrModel::HayaiOcr,
-            model => {
-                return Err(serde::de::Error::custom(format!(
-                    "unsupported OCR model {model}"
-                )));
-            }
-        };
-        let inpainting = match file.inpainting.model.as_str() {
-            "lama" => InpaintingModel::LaMa {},
-            "aot-inpainting" => InpaintingModel::AotInpainting {},
-            "flux2-klein" => {
-                InpaintingModel::Flux2Klein(file.processor.flux2_klein.clone().unwrap_or_default())
-            }
-            "rorem-mixed" => {
-                InpaintingModel::RoremMixed(file.processor.rorem_mixed.clone().unwrap_or_default())
-            }
-            model => {
-                return Err(serde::de::Error::custom(format!(
-                    "unsupported inpainting model {model}"
-                )));
-            }
-        };
+        let ocr = OcrModel::from_name(&file.ocr.model).map_err(serde::de::Error::custom)?;
+        let inpainting = InpaintingModel::from_name(&file.inpainting.model, &file.processor)
+            .map_err(serde::de::Error::custom)?;
         Ok(Self {
             detection,
             ocr,
@@ -159,14 +156,16 @@ impl<'de> Deserialize<'de> for PipelineConfig {
 
 impl Default for PipelineConfig {
     fn default() -> Self {
+        let processor = ProcessorConfig::default();
         Self {
             detection: DetectionModel::KoharuLayoutRFDetrSeg2XL(
                 KoharuLayoutRFDetrSeg2XLConfig::default(),
             ),
-            ocr: OcrModel::PaddleOcrVl1_6,
+            ocr: OcrModel::from_name(OCR[0]).expect("the default OCR model is known"),
             translation: TranslationConfig::default(),
-            inpainting: InpaintingModel::LaMa {},
-            processor: ProcessorConfig::default(),
+            inpainting: InpaintingModel::from_name(INPAINTING[0], &processor)
+                .expect("the default inpainting model is known"),
+            processor,
         }
     }
 }
@@ -231,14 +230,14 @@ impl PipelineConfig {
     pub fn validate(&self) -> Result<()> {
         let _ = self.detection()?;
         let _ = self.inpainting()?;
-        if !matches!(
-            self.ocr,
-            OcrModel::PaddleOcrVl1_6
-                | OcrModel::MangaOcr
-                | OcrModel::BaberuOcr
-                | OcrModel::HayaiOcr
-        ) {
-            bail!("unsupported OCR model")
+        for (name, available) in [
+            (self.detection.name(), DETECTION),
+            (self.ocr.name(), OCR),
+            (self.inpainting.name(), INPAINTING),
+        ] {
+            if !available.contains(&name) {
+                bail!("{name} is not available on this platform");
+            }
         }
         Ok(())
     }
@@ -273,6 +272,42 @@ pub enum OcrModel {
     BaberuOcr,
     #[serde(rename = "hayai-ocr")]
     HayaiOcr,
+    /// Apple Vision text recognition, on iOS.
+    #[serde(rename = "apple-vision")]
+    AppleVision,
+}
+
+impl DetectionModel {
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::KoharuLayoutRFDetrSeg2XL(_) => "koharu-layout-rfdetr-seg-2xl",
+        }
+    }
+}
+
+impl OcrModel {
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::PaddleOcrVl1_6 => "paddleocr-vl-1.6",
+            Self::MangaOcr => "manga-ocr",
+            Self::BaberuOcr => "baberu-ocr",
+            Self::HayaiOcr => "hayai-ocr",
+            Self::AppleVision => "apple-vision",
+        }
+    }
+
+    fn from_name(name: &str) -> Result<Self> {
+        Ok(match name {
+            "paddleocr-vl-1.6" => Self::PaddleOcrVl1_6,
+            "manga-ocr" => Self::MangaOcr,
+            "baberu-ocr" => Self::BaberuOcr,
+            "hayai-ocr" => Self::HayaiOcr,
+            "apple-vision" => Self::AppleVision,
+            model => bail!("unsupported OCR model {model}"),
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Type)]
@@ -286,6 +321,28 @@ pub enum InpaintingModel {
     Flux2Klein(Flux2KleinConfig),
     #[serde(rename = "rorem-mixed")]
     RoremMixed(RoremMixedConfig),
+}
+
+impl InpaintingModel {
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::LaMa {} => "lama",
+            Self::AotInpainting {} => "aot-inpainting",
+            Self::Flux2Klein(_) => "flux2-klein",
+            Self::RoremMixed(_) => "rorem-mixed",
+        }
+    }
+
+    fn from_name(name: &str, processor: &ProcessorConfig) -> Result<Self> {
+        Ok(match name {
+            "lama" => Self::LaMa {},
+            "aot-inpainting" => Self::AotInpainting {},
+            "flux2-klein" => Self::Flux2Klein(processor.flux2_klein.clone().unwrap_or_default()),
+            "rorem-mixed" => Self::RoremMixed(processor.rorem_mixed.clone().unwrap_or_default()),
+            model => bail!("unsupported inpainting model {model}"),
+        })
+    }
 }
 
 #[cfg(test)]

@@ -134,6 +134,11 @@ const artworkLayer: Layer = {
 }
 
 const preferences: Preferences = {
+  processors: {
+    detection: ['koharu-layout-rfdetr-seg-2xl'],
+    ocr: ['paddleocr-vl-1.6', 'manga-ocr', 'baberu-ocr', 'hayai-ocr'],
+    inpainting: ['lama', 'aot-inpainting', 'flux2-klein', 'rorem-mixed'],
+  },
   pipeline: {
     detection: { model: 'koharu-layout-rfdetr-seg-2xl' },
     ocr: { model: 'paddleocr-vl-1.6' },

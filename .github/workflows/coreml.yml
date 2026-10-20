@@ -1,0 +1,73 @@
+name: Core ML
+
+# Push a tag such as `coreml-koharu-layout-rfdetr-seg-2xl-1152-1` to convert the iOS detection
+# model, verify it against PyTorch on macOS, and publish it on that tag's release.
+on:
+  push:
+    tags: ['coreml-*']
+
+permissions:
+  contents: read
+
+env:
+  NAME: koharu-layout-rfdetr-seg-2xl-1152
+  CONVERTER: crates/koharu-ml/coreml/convert_koharu_layout.py
+
+jobs:
+  convert:
+    name: Convert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install converter dependencies
+        run: >-
+          python -m pip install -r crates/koharu-ml/coreml/requirements.txt
+          --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: Convert
+        run: >-
+          python "$CONVERTER" convert
+          --image crates/koharu-ml/benches/fixtures/object_detection/1.jpg
+          --out build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coreml-package
+          path: build
+          if-no-files-found: error
+          retention-days: 3
+
+  verify:
+    name: Verify and publish
+    needs: convert
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: coreml-package
+          path: build
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install converter dependencies
+        run: python -m pip install -r crates/koharu-ml/coreml/requirements.txt
+      # Core ML only runs on Apple platforms, so the comparison against PyTorch happens here.
+      - name: Verify against PyTorch
+        run: python "$CONVERTER" verify --out build
+      - name: Compile for iOS
+        run: |
+          xcrun coremlcompiler compile "build/$NAME.mlpackage" build/compiled
+          (cd build/compiled && zip -qr "../$NAME.mlmodelc.zip" "$NAME.mlmodelc")
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: KoharuLayout RF-DETR Seg 2XL for Core ML, verified against PyTorch (see verification.json).
+          fail_on_unmatched_files: true
+          files: |
+            build/${{ env.NAME }}.mlmodelc.zip
+            build/verification.json

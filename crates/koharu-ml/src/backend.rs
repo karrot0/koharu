@@ -30,11 +30,6 @@ impl TryIntoDevice<koharu_torch::Device> for Device {
             {
                 Ok(koharu_torch::Device::Mps)
             }
-            // PyTorch builds its MPS backend only for macOS. On iOS, Metal serves llama.cpp and
-            // stable-diffusion.cpp while Torch models run on the CPU.
-            Backend::Metal if self.index == 0 && cfg!(target_os = "ios") => {
-                Ok(koharu_torch::Device::Cpu)
-            }
             Backend::Vulkan | Backend::Metal => {
                 bail!(
                     "Torch cannot address {} device index {}",

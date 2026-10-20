@@ -154,12 +154,12 @@ export function SettingsPage() {
   if (!open) return null
 
   return (
-    <section className='settings-page flex min-h-0 flex-1 bg-[var(--surface-sidebar)] text-foreground'>
-      <nav className='flex w-64 shrink-0 flex-col bg-[var(--surface-sidebar)] px-3 py-4'>
+    <section className='settings-page flex min-h-0 flex-1 bg-[var(--surface-sidebar)] text-foreground max-lg:flex-col'>
+      <nav className='flex w-64 shrink-0 flex-col bg-[var(--surface-sidebar)] px-3 py-4 max-lg:w-full max-lg:flex-row max-lg:items-center max-lg:gap-1 max-lg:overflow-x-auto max-lg:py-2'>
         <Button
           type='button'
           variant='ghost'
-          className='mb-5 h-9 justify-start gap-2 rounded-lg px-2 text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground'
+          className='mb-5 h-9 shrink-0 justify-start gap-2 rounded-lg px-2 text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground max-lg:mb-0'
           onClick={() => {
             if (!pipeline || !providers || !typesetting) {
               setOpen(false)
@@ -172,10 +172,10 @@ export function SettingsPage() {
         >
           <ArrowLeft className='size-4' /> {t('settings.backToEditor')}
         </Button>
-        <p className='mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
+        <p className='mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase max-lg:hidden'>
           {t('settings.title')}
         </p>
-        <div className='grid gap-1'>
+        <div className='grid gap-1 max-lg:flex'>
           {tabs.map(([id, Icon]) => (
             <Button
               key={id}
@@ -183,7 +183,7 @@ export function SettingsPage() {
               variant='ghost'
               size='sm'
               data-active={tab === id}
-              className='h-10 w-full justify-start gap-3 rounded-lg px-3 text-left text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
+              className='h-10 w-full justify-start gap-3 rounded-lg px-3 text-left text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground max-lg:w-auto max-lg:shrink-0'
               onClick={() => setTab(id)}
             >
               <Icon className='size-4' /> {t(`settings.tabs.${id}`)}
@@ -191,16 +191,20 @@ export function SettingsPage() {
           ))}
         </div>
       </nav>
-      <main className='relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden rounded-tl-2xl bg-[var(--surface-canvas)] shadow-[var(--shadow-content)]'>
-        <header className='flex h-14 shrink-0 items-center border-b border-border/80 px-8'>
+      <main className='relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-tl-2xl bg-[var(--surface-canvas)] shadow-[var(--shadow-content)] max-lg:rounded-none'>
+        <header className='flex h-14 shrink-0 items-center border-b border-border/80 px-8 max-lg:hidden'>
           <h1 className='text-[13px] font-semibold tracking-[-0.02em]'>{t('settings.title')}</h1>
         </header>
         <ScrollArea className='min-h-0 flex-1'>
-          <div className='mx-auto w-full max-w-4xl px-10 py-10'>
+          <div className='mx-auto w-full max-w-4xl px-10 py-10 max-lg:px-4 max-lg:py-6'>
             {tab === 'appearance' && <AppearancePreferences />}
             {tab === 'pipeline' &&
-              (pipeline ? (
-                <PipelinePreferences value={pipeline} onChange={setPipeline} />
+              (pipeline && preferences ? (
+                <PipelinePreferences
+                  value={pipeline}
+                  processors={preferences.processors}
+                  onChange={setPipeline}
+                />
               ) : (
                 <LoadingPreferences />
               ))}

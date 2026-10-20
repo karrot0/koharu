@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
     if model.is_none()
         && !matches!(
             provider,
-            Provider::DeepL | Provider::GoogleCloudTranslation | Provider::Caiyun
+            Provider::DeepL | Provider::GoogleCloudTranslation | Provider::Caiyun | Provider::Apple
         )
     {
         anyhow::bail!("--model is required for {provider}");
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
 fn prepare_secret(args: &Args, provider: Provider) -> Result<()> {
     let provider_id: &'static str = provider.into();
     let Some((variable, required)) = (match provider {
-        Provider::Local => None,
+        Provider::Local | Provider::Apple => None,
         Provider::OpenAi => Some(("OPENAI_API_KEY", true)),
         Provider::Gemini => Some(("GEMINI_API_KEY", true)),
         Provider::Claude => Some(("ANTHROPIC_API_KEY", true)),

@@ -4,6 +4,8 @@ use koharu_runtime::{Feature, Hardware, Runtime};
 use tokio::sync::OnceCell;
 
 mod backend;
+#[cfg(target_os = "ios")]
+mod coreml;
 
 pub mod aot_inpainting;
 pub mod baberu_ocr;
@@ -46,7 +48,13 @@ static READY: OnceCell<Device> = OnceCell::const_new();
 pub async fn init() -> anyhow::Result<()> {
     READY
         .get_or_try_init(|| async {
-            let runtime = Runtime::discover([Feature::Torch, Feature::Llama, Feature::Diffusion])?;
+            // iOS runs detection through Core ML and ships no Torch runtime.
+            let features: &[Feature] = if cfg!(target_os = "ios") {
+                &[Feature::Llama, Feature::Diffusion]
+            } else {
+                &[Feature::Torch, Feature::Llama, Feature::Diffusion]
+            };
+            let runtime = Runtime::discover(features.iter().copied())?;
             let device = runtime
                 .initialize()
                 .await

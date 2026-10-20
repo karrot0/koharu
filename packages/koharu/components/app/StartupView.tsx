@@ -12,7 +12,7 @@ export function StartupView() {
   const platform = usePlatform()
 
   return (
-    <div className='relative flex h-screen w-screen flex-col overflow-hidden bg-[var(--surface-titlebar)] text-foreground'>
+    <div className='safe-area relative flex h-dvh w-screen flex-col overflow-hidden bg-[var(--surface-titlebar)] text-foreground'>
       <header
         data-tauri-drag-region='deep'
         className='grid h-10 shrink-0 grid-cols-[132px_1fr_132px] items-center border-b border-border/80 bg-[var(--surface-titlebar)] shadow-[var(--shadow-titlebar)]'

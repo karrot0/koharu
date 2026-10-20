@@ -4,42 +4,64 @@
 //! https://huggingface.co/mayocream/koharu-layout-rfdetr-seg-2xl-1152/tree/aed55fdb8ca953c6bec33cf6ed6dd52a9b72bfa2
 //! RF-DETR upstream implementation:
 //! https://github.com/roboflow/rf-detr/tree/4ab7c18729de9d02ffd0495795d0831b5630f01b
+//!
+//! Desktop runs the Torch port in `model.rs`. iOS has no Torch runtime and runs the same
+//! checkpoint converted to Core ML (`coreml.rs`), published on the karrot0/koharu fork.
 
 mod config;
+#[cfg(target_os = "ios")]
+mod coreml;
+mod detections;
+#[cfg(not(target_os = "ios"))]
 mod model;
+#[cfg(not(target_os = "ios"))]
 mod processor;
 
 use anyhow::{Context, Result};
 use image::DynamicImage;
-use koharu_torch::Device;
 
-use crate::backend::TryIntoDevice;
-
+#[cfg(not(target_os = "ios"))]
+pub use self::processor::KoharuLayoutRFDetrImageProcessor;
 pub use self::{
     config::{KoharuLayoutRFDetrSeg2XLConfig, KoharuLayoutThresholds},
-    processor::{
-        KoharuLayoutDetection, KoharuLayoutDetections, KoharuLayoutMask,
-        KoharuLayoutRFDetrImageProcessor,
-    },
+    detections::{KoharuLayoutDetection, KoharuLayoutDetections, KoharuLayoutMask},
 };
-
-use self::model::Model;
 
 crate::model_repository!("mayocream/koharu-layout-rfdetr-seg-2xl-1152" @ "aed55fdb8ca953c6bec33cf6ed6dd52a9b72bfa2" {
     CONFIG = "inference_config.json",
+});
+#[cfg(not(target_os = "ios"))]
+crate::model_repository!("mayocream/koharu-layout-rfdetr-seg-2xl-1152" @ "aed55fdb8ca953c6bec33cf6ed6dd52a9b72bfa2" {
     WEIGHTS = "model.safetensors",
 });
 
+/// The checkpoint above converted by `coreml/convert_koharu_layout.py` and compiled for iOS.
+#[cfg(target_os = "ios")]
+const CORE_ML_MODEL: koharu_runtime::GitHubReleaseArchive<'static> =
+    koharu_runtime::GitHubReleaseArchive::pinned(
+        "karrot0/koharu",
+        "coreml-koharu-layout-rfdetr-seg-2xl-1152-1",
+        "koharu-layout-rfdetr-seg-2xl-1152.mlmodelc.zip",
+    );
+
 #[derive(Debug)]
 pub struct KoharuLayoutRFDetrSeg2XL {
-    device: Device,
-    model: Model,
+    #[cfg(not(target_os = "ios"))]
+    device: koharu_torch::Device,
+    #[cfg(not(target_os = "ios"))]
+    model: model::Model,
+    #[cfg(not(target_os = "ios"))]
     processor: KoharuLayoutRFDetrImageProcessor,
+    #[cfg(target_os = "ios")]
+    network: coreml::CoreMlLayout,
 }
 
 impl KoharuLayoutRFDetrSeg2XL {
+    #[cfg(not(target_os = "ios"))]
     pub async fn load(device: crate::Device) -> Result<Self> {
-        let device: Device = device.try_into_device()?;
+        use crate::backend::TryIntoDevice;
+
+        let device: koharu_torch::Device = device.try_into_device()?;
         let config_path = CONFIG
             .resolve()
             .await
@@ -50,7 +72,7 @@ impl KoharuLayoutRFDetrSeg2XL {
             .context("failed to resolve KoharuLayout RF-DETR weights")?;
         let config = KoharuLayoutRFDetrSeg2XLConfig::from_file(&config_path)?;
         let processor = KoharuLayoutRFDetrImageProcessor::new(&config)?;
-        let mut model = Model::new(device);
+        let mut model = model::Model::new(device);
         model
             .load(&weights_path)
             .with_context(|| format!("failed to load {}", weights_path.display()))?;
@@ -61,10 +83,30 @@ impl KoharuLayoutRFDetrSeg2XL {
         })
     }
 
-    pub fn inference(&self, image: &DynamicImage) -> Result<KoharuLayoutDetections> {
-        self.inference_with_thresholds(image, self.processor.recommended_thresholds())
+    /// Core ML picks the Neural Engine, GPU, or CPU itself, so the runtime device is unused.
+    #[cfg(target_os = "ios")]
+    pub async fn load(_device: crate::Device) -> Result<Self> {
+        let config_path = CONFIG
+            .resolve()
+            .await
+            .context("failed to resolve KoharuLayout RF-DETR inference config")?;
+        let model_path = CORE_ML_MODEL
+            .resolve()
+            .await
+            .context("failed to resolve the KoharuLayout RF-DETR Core ML model")?
+            .join("koharu-layout-rfdetr-seg-2xl-1152.mlmodelc");
+        let config = KoharuLayoutRFDetrSeg2XLConfig::from_file(&config_path)?;
+        let model = crate::coreml::CoreMlModel::load(&model_path)?;
+        Ok(Self {
+            network: coreml::CoreMlLayout::new(model, &config)?,
+        })
     }
 
+    pub fn inference(&self, image: &DynamicImage) -> Result<KoharuLayoutDetections> {
+        self.inference_with_thresholds(image, self.recommended_thresholds())
+    }
+
+    #[cfg(not(target_os = "ios"))]
     pub fn inference_with_thresholds(
         &self,
         image: &DynamicImage,
@@ -78,8 +120,20 @@ impl KoharuLayoutRFDetrSeg2XL {
         })
     }
 
+    #[cfg(target_os = "ios")]
+    pub fn inference_with_thresholds(
+        &self,
+        image: &DynamicImage,
+        thresholds: KoharuLayoutThresholds,
+    ) -> Result<KoharuLayoutDetections> {
+        self.network.inference(image, thresholds)
+    }
+
     pub fn recommended_thresholds(&self) -> KoharuLayoutThresholds {
-        self.processor.recommended_thresholds()
+        #[cfg(not(target_os = "ios"))]
+        return self.processor.recommended_thresholds();
+        #[cfg(target_os = "ios")]
+        return self.network.recommended_thresholds();
     }
 }
 

@@ -7,5 +7,12 @@
     <true/>
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <true/>
+    <!-- Apps built with the iOS 27 SDK must use the scene lifecycle. Declaring the manifest opts
+         in; tao supplies the scene delegate. -->
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
 </dict>
 </plist>

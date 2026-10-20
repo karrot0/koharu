@@ -100,6 +100,12 @@ export type AnalysisRegion = {
 	label: string | null,
 };
 
+/**
+ *  Apple Translation has no settings: its languages are downloaded in the system's Translate
+ *  settings.
+ */
+export type AppleConfig = Record<string, never>;
+
 export type Bounds = {
 	x: number,
 	y: number,
@@ -336,7 +342,9 @@ export type ModelSelection = {
 	reasoning?: boolean,
 };
 
-export type OcrModel = { model: "paddleocr-vl-1.6" } | { model: "manga-ocr" } | { model: "baberu-ocr" } | { model: "hayai-ocr" };
+export type OcrModel = { model: "paddleocr-vl-1.6" } | { model: "manga-ocr" } | { model: "baberu-ocr" } | { model: "hayai-ocr" } | 
+/**  Apple Vision text recognition, on iOS. */
+{ model: "apple-vision" };
 
 export type OpenAiCompatibleConfig = {
 	base_url?: string | null,
@@ -400,9 +408,18 @@ export type Point = {
 
 export type Preferences = {
 	pipeline: PipelineConfig,
+	/**  The processors this build can run, so the UI offers only those. */
+	processors: ProcessorCatalog,
 	providers: ProviderPreferences,
 	typesetting: TypesettingConfig,
 	languages: LanguageChoice[],
+};
+
+/**  The processors this build can run for each stage, in display order; the first is the default. */
+export type ProcessorCatalog = {
+	detection: string[],
+	ocr: string[],
+	inpainting: string[],
 };
 
 export type ProcessorConfig = {
@@ -423,9 +440,9 @@ export type ProjectSummary = {
 	name: string,
 };
 
-export type Provider = "local" | "openai" | "gemini" | "claude" | "grok" | "minimax" | "deepseek" | "openai-compatible" | "openrouter" | "lm-studio" | "deepl" | "google-cloud-translation" | "caiyun";
+export type Provider = "local" | "openai" | "gemini" | "claude" | "grok" | "minimax" | "deepseek" | "openai-compatible" | "openrouter" | "lm-studio" | "deepl" | "google-cloud-translation" | "caiyun" | "apple";
 
-export type ProviderConfig = { provider: "local"; settings: LocalConfig } | { provider: "openai"; settings: OpenAiConfig } | { provider: "gemini"; settings: GeminiConfig } | { provider: "claude"; settings: ClaudeConfig } | { provider: "grok"; settings: GrokConfig } | { provider: "minimax"; settings: MiniMaxConfig } | { provider: "deepseek"; settings: DeepSeekConfig } | { provider: "openai-compatible"; settings: OpenAiCompatibleConfig } | { provider: "openrouter"; settings: OpenRouterConfig } | { provider: "lm-studio"; settings: LmStudioConfig } | { provider: "deepl"; settings: DeepLConfig } | { provider: "google-cloud-translation"; settings: GoogleCloudConfig } | { provider: "caiyun"; settings: CaiyunConfig };
+export type ProviderConfig = { provider: "local"; settings: LocalConfig } | { provider: "openai"; settings: OpenAiConfig } | { provider: "gemini"; settings: GeminiConfig } | { provider: "claude"; settings: ClaudeConfig } | { provider: "grok"; settings: GrokConfig } | { provider: "minimax"; settings: MiniMaxConfig } | { provider: "deepseek"; settings: DeepSeekConfig } | { provider: "openai-compatible"; settings: OpenAiCompatibleConfig } | { provider: "openrouter"; settings: OpenRouterConfig } | { provider: "lm-studio"; settings: LmStudioConfig } | { provider: "deepl"; settings: DeepLConfig } | { provider: "google-cloud-translation"; settings: GoogleCloudConfig } | { provider: "caiyun"; settings: CaiyunConfig } | { provider: "apple"; settings: AppleConfig };
 
 export type ProviderPreference = {
 	name: string,

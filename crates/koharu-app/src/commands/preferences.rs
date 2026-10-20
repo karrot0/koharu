@@ -1,10 +1,10 @@
 use std::fmt;
 
 use anyhow::Result;
-use koharu_pipeline::PipelineConfig;
+use koharu_pipeline::{PipelineConfig, ProcessorCatalog};
 use koharu_renderer::TypesettingConfig;
 use koharu_secrets::ExposeSecret as _;
-use koharu_translator::{Language, Model, Provider, ProviderConfig, ProvidersConfig};
+use koharu_translator::{Language, Model, ProviderConfig, ProvidersConfig};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -13,6 +13,8 @@ use super::Error;
 #[derive(Clone, Debug, Serialize, Type)]
 pub struct Preferences {
     pub pipeline: PipelineConfig,
+    /// The processors this build can run, so the UI offers only those.
+    pub processors: ProcessorCatalog,
     pub providers: ProviderPreferences,
     pub typesetting: TypesettingConfig,
     pub languages: Vec<LanguageChoice>,
@@ -28,6 +30,7 @@ impl Preferences {
         let typesetting = typesetting.read()?;
         Ok(Self {
             pipeline: pipeline.clone(),
+            processors: ProcessorCatalog::current(),
             providers: ProviderPreferences::from_config(&providers)?,
             typesetting: typesetting.clone(),
             languages: Language::ALL
@@ -60,11 +63,11 @@ impl ProviderPreferences {
             .into_iter()
             .map(|config| {
                 let provider = config.provider();
-                let credential = if provider == Provider::Local {
-                    None
-                } else {
+                let credential = if provider.takes_credential() {
                     let key: &'static str = provider.into();
                     Some(CredentialInput::load(key)?)
+                } else {
+                    None
                 };
                 Ok(ProviderPreference {
                     name: provider.name().to_owned(),
@@ -82,13 +85,13 @@ impl ProviderPreferences {
         for entry in self.entries {
             let provider = entry.config.provider();
             match entry.credential {
-                None if provider == Provider::Local => {}
-                Some(credential) if provider != Provider::Local => {
+                None if !provider.takes_credential() => {}
+                Some(credential) if provider.takes_credential() => {
                     let key: &'static str = provider.into();
                     credentials.push((key, credential));
                 }
                 None => anyhow::bail!("missing credential input for {provider}"),
-                Some(_) => anyhow::bail!("local translation does not accept credentials"),
+                Some(_) => anyhow::bail!("{provider} does not accept credentials"),
             }
             configs.push(entry.config);
         }
@@ -156,6 +159,7 @@ pub(crate) async fn save_preferences(
     typesetting: TypesettingConfig,
 ) -> std::result::Result<Preferences, Error> {
     remember_pipeline_profiles(&mut pipeline);
+    pipeline.validate()?;
     let providers = providers.into_config()?;
     let pipeline_config = PipelineConfig::load()?;
     let providers_config = ProvidersConfig::load()?;

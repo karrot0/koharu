@@ -35,12 +35,7 @@ impl Processor {
 #[async_trait]
 impl StageProcessor for Processor {
     fn model(&self) -> &'static str {
-        match self.config {
-            OcrModel::MangaOcr => "manga-ocr",
-            OcrModel::BaberuOcr => "baberu-ocr",
-            OcrModel::HayaiOcr => "hayai-ocr",
-            OcrModel::PaddleOcrVl1_6 => "paddleocr-vl-1.6",
-        }
+        self.config.name()
     }
 
     fn unload(&self) -> bool {
@@ -69,6 +64,19 @@ enum Model {
     Baberu(Arc<Mutex<BaberuOcr>>),
     Hayai(Arc<Mutex<HayaiOcr>>),
     Paddle(Arc<Mutex<PaddleOCRVLQuantized>>),
+    #[cfg(target_os = "ios")]
+    Apple(Arc<Mutex<AppleVision>>),
+}
+
+/// Apple Vision text recognition. Manga is mostly Japanese, with English sound effects and notes.
+#[cfg(target_os = "ios")]
+struct AppleVision;
+
+#[cfg(target_os = "ios")]
+impl AppleVision {
+    fn inference(&self, image: &DynamicImage) -> Result<String> {
+        koharu_apple::recognize_text(image, &["ja-JP", "en-US"])
+    }
 }
 
 impl Model {
@@ -86,6 +94,12 @@ impl Model {
             OcrModel::PaddleOcrVl1_6 => Ok(Self::Paddle(Arc::new(Mutex::new(
                 PaddleOCRVLQuantized::load(device).await?,
             )))),
+            #[cfg(target_os = "ios")]
+            OcrModel::AppleVision => Ok(Self::Apple(Arc::new(Mutex::new(AppleVision)))),
+            #[cfg(not(target_os = "ios"))]
+            OcrModel::AppleVision => {
+                bail!("Apple Vision text recognition is only available on iOS")
+            }
         }
     }
 
@@ -95,6 +109,8 @@ impl Model {
             Self::Baberu(_) => "baberu-ocr",
             Self::Hayai(_) => "hayai-ocr",
             Self::Paddle(_) => "paddleocr-vl-1.6",
+            #[cfg(target_os = "ios")]
+            Self::Apple(_) => "apple-vision",
         };
         let page = input.page;
         let mut targets = Vec::new();
@@ -162,6 +178,13 @@ impl Model {
             Self::Paddle(model) => {
                 infer_text(model.clone(), targets, |model, image| {
                     Ok(model.inference(image, PaddleOCRVLTask::Ocr)?.text)
+                })
+                .await?
+            }
+            #[cfg(target_os = "ios")]
+            Self::Apple(model) => {
+                infer_text(model.clone(), targets, |model, image| {
+                    model.inference(image)
                 })
                 .await?
             }

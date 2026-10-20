@@ -88,7 +88,9 @@ pub(crate) async fn translate(
             google_cloud::translate(client, &providers.google_cloud_translation, request).await
         }
         Provider::Caiyun => caiyun::translate(client, &providers.caiyun, request).await,
-        Provider::Local => unreachable!("local translation has its own backend"),
+        Provider::Local | Provider::Apple => {
+            unreachable!("on-device translation has its own backend")
+        }
     }
 }
 

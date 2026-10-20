@@ -20,6 +20,7 @@ publish = false
 
 [workspace.dependencies]
 koharu-app = { path = "crates/koharu-app" }
+koharu-apple = { path = "crates/koharu-apple" }
 koharu-bindgen = { path = "crates/koharu-bindgen" }
 koharu-config = { path = "crates/koharu-config" }
 koharu-storage = { path = "crates/koharu-storage" }
@@ -171,6 +172,11 @@ proc-macro2 = "1.0.107"
 quote = "1.0.47"
 syn = { version = "3.0.6", features = ["full"] }
 libc = "0.2.189"
+swift-rs = { version = "1.0.9", features = ["build"] }
+objc2 = "0.6.5"
+block2 = "0.6.2"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std"] }
+objc2-core-ml = { version = "0.3.2", default-features = false, features = ["std"] }
 memmap2 = "0.9.11"
 
 [patch.crates-io]

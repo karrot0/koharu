@@ -94,12 +94,7 @@ impl Processor {
 #[async_trait]
 impl StageProcessor for Processor {
     fn model(&self) -> &'static str {
-        match self.config {
-            InpaintingModel::LaMa {} => "lama",
-            InpaintingModel::AotInpainting {} => "aot-inpainting",
-            InpaintingModel::Flux2Klein(_) => "flux2-klein",
-            InpaintingModel::RoremMixed(_) => "rorem-mixed",
-        }
+        self.config.name()
     }
 
     fn skip(&self, input: &StageInput) -> Result<bool> {

@@ -10,18 +10,13 @@ export type PipelineModel = DetectionModel | OcrModel | InpaintingModel
 export type ModelStage = Exclude<Stage, 'translation'>
 export type ModelName = PipelineModel['model']
 
-export const modelOptions = {
-  detection: ['koharu-layout-rfdetr-seg-2xl'],
-  ocr: ['paddleocr-vl-1.6', 'manga-ocr', 'baberu-ocr', 'hayai-ocr'],
-  inpainting: ['lama', 'aot-inpainting', 'flux2-klein', 'rorem-mixed'],
-} satisfies Record<ModelStage, ModelName[]>
-
 export const modelNames: Record<ModelName, string> = {
   'koharu-layout-rfdetr-seg-2xl': 'Koharu Layout RF-DETR Seg 2XL',
   'paddleocr-vl-1.6': 'PaddleOCR-VL 1.6',
   'manga-ocr': 'Manga OCR',
   'baberu-ocr': 'Baberu OCR',
   'hayai-ocr': 'Hayai OCR',
+  'apple-vision': 'Apple Vision',
   lama: 'LaMa',
   'aot-inpainting': 'AOT Inpainting',
   'flux2-klein': 'FLUX.2 Klein',
@@ -36,6 +31,7 @@ export function defaultModel(model: ModelName): PipelineModel {
     case 'manga-ocr':
     case 'baberu-ocr':
     case 'hayai-ocr':
+    case 'apple-vision':
     case 'lama':
     case 'aot-inpainting':
       return { model }
@@ -49,11 +45,8 @@ export function defaultModel(model: ModelName): PipelineModel {
 export function stageModel(config: PipelineConfig, stage: ModelStage): PipelineModel {
   const selected =
     stage === 'detection' ? config.detection : stage === 'ocr' ? config.ocr : config.inpainting
-  if (selected) {
-    const profile = config.processor?.[selected.model as keyof typeof config.processor]
-    return profile ? ({ model: selected.model, ...profile } as PipelineModel) : selected
-  }
-  return defaultModel(modelOptions[stage][0]!)
+  const profile = config.processor?.[selected.model as keyof typeof config.processor]
+  return profile ? ({ model: selected.model, ...profile } as PipelineModel) : selected
 }
 
 export function replaceStage(

@@ -85,6 +85,14 @@ export function CanvasWorkspace() {
   const surface = useRef<HTMLDivElement>(null)
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null)
   const gesture = useRef<Gesture | null>(null)
+  // Touch points by pointer, and the camera when a second finger started a pinch.
+  const touches = useRef(new Map<number, Point>())
+  const pinch = useRef<{
+    distance: number
+    midpoint: Point
+    zoom: number
+    translation: [number, number]
+  } | null>(null)
   const previousPageIndex = useRef<number | null>(null)
   const spaceHeld = useRef(false)
   const transformActive = useRef(false)
@@ -475,6 +483,48 @@ export function CanvasWorkspace() {
     }
   }
 
+  const startPinch = () => {
+    const [first, second] = [...touches.current.values()]
+    if (!first || !second) return
+    const { zoom, translation } = useKoharuStore.getState().camera
+    pinch.current = {
+      distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+      midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 },
+      zoom,
+      translation,
+    }
+  }
+
+  // Two fingers zoom about their midpoint and pan with it, using the wheel zoom's camera
+  // model: the page point under the starting midpoint stays under the current one.
+  const movePinch = () => {
+    const start = pinch.current
+    const [first, second] = [...touches.current.values()]
+    if (!start || !first || !second || !page) return
+    const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 }
+    const distance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y))
+    const zoom = clamp((start.zoom * distance) / start.distance, 0.02, 16)
+    const pageX = (start.midpoint.x - start.translation[0]) / start.zoom
+    const pageY = (start.midpoint.y - start.translation[1]) / start.zoom
+    const bounds = surface.current!.getBoundingClientRect()
+    const dpr = window.devicePixelRatio
+    const translation = clampCameraTranslation(
+      [midpoint.x - pageX * zoom, midpoint.y - pageY * zoom],
+      zoom,
+      pageWidth ?? page.size.width,
+      pageHeight ?? page.size.height,
+      bounds.width * dpr,
+      bounds.height * dpr,
+      dpr,
+    )
+    useKoharuStore.setState({ camera: { zoom, translation, fitted: false } })
+  }
+
+  const releaseTouch = (pointer: number) => {
+    touches.current.delete(pointer)
+    if (touches.current.size < 2) pinch.current = null
+  }
+
   const finishGesture = () => {
     const current = gesture.current
     gesture.current = null
@@ -506,30 +556,30 @@ export function CanvasWorkspace() {
       const operation =
         current.kind === 'paint'
           ? enqueue(() =>
-            call(commands.commitPaint, current.revision, current.layer, current.points, {
-              diameter: current.diameter,
-              color: current.color!,
-            }),
-          ).then((result) => {
-            selectLayers([result.layer])
-            return refresh(projectKey, pagesKey, pageKey)
-          })
-          : current.kind === 'erase'
-            ? enqueue(() =>
-              call(
-                commands.commitErase,
-                current.revision,
-                current.layer!,
-                current.points,
-                current.diameter,
-              ),
+              call(commands.commitPaint, current.revision, current.layer, current.points, {
+                diameter: current.diameter,
+                color: current.color!,
+              }),
             ).then((result) => {
               selectLayers([result.layer])
               return refresh(projectKey, pagesKey, pageKey)
             })
+          : current.kind === 'erase'
+            ? enqueue(() =>
+                call(
+                  commands.commitErase,
+                  current.revision,
+                  current.layer!,
+                  current.points,
+                  current.diameter,
+                ),
+              ).then((result) => {
+                selectLayers([result.layer])
+                return refresh(projectKey, pagesKey, pageKey)
+              })
             : enqueue(() =>
-              call(commands.commitInpaint, current.revision, current.points, current.diameter),
-            )
+                call(commands.commitInpaint, current.revision, current.points, current.diameter),
+              )
       commitPending.current = true
       void operation
         .catch(() => canvas?.cancelStroke())
@@ -569,6 +619,19 @@ export function CanvasWorkspace() {
             const physical = clientPhysicalPoint(event.clientX, event.clientY)
             const point = clientPagePoint(event.clientX, event.clientY)
             setCursor(physical)
+
+            if (event.pointerType === 'touch') {
+              touches.current.set(event.pointerId, physical)
+              if (touches.current.size === 2) {
+                // A second finger turns the touch into pan and zoom and discards the first
+                // finger's uncommitted stroke or drag, as iPad drawing apps do.
+                cancelGesture()
+                startPinch()
+                event.preventDefault()
+                return
+              }
+              if (touches.current.size > 2 || pinch.current) return
+            }
 
             if (event.button === 1 || tool === 'pan' || spaceHeld.current) {
               gesture.current = {
@@ -684,17 +747,34 @@ export function CanvasWorkspace() {
           }}
           onPointerMove={(event) => {
             if (!page) return
+            if (touches.current.has(event.pointerId)) {
+              touches.current.set(
+                event.pointerId,
+                clientPhysicalPoint(event.clientX, event.clientY),
+              )
+              if (pinch.current) {
+                movePinch()
+                return
+              }
+            }
             const coalesced = event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent]
             moveGesture(event.pointerId, coalesced.length ? coalesced : [event.nativeEvent])
           }}
           onPointerUp={(event) => {
-            moveGesture(event.pointerId, [event.nativeEvent])
-            finishGesture()
+            const pinching = pinch.current !== null
+            releaseTouch(event.pointerId)
+            if (!pinching) {
+              moveGesture(event.pointerId, [event.nativeEvent])
+              finishGesture()
+            }
             if (event.currentTarget.hasPointerCapture(event.pointerId)) {
               event.currentTarget.releasePointerCapture(event.pointerId)
             }
           }}
-          onPointerCancel={() => cancelGesture()}
+          onPointerCancel={(event) => {
+            releaseTouch(event.pointerId)
+            cancelGesture()
+          }}
           onPointerLeave={(event) => {
             if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
               setHovered(null)
@@ -919,7 +999,7 @@ class FrameCommand<Value> {
   constructor(
     private readonly execute: (value: Value) => void | Promise<unknown>,
     private readonly merge: (current: Value, next: Value) => Value = (_current, next) => next,
-  ) { }
+  ) {}
 
   schedule(value: Value): void {
     this.pending = this.pending === undefined ? value : this.merge(this.pending, value)

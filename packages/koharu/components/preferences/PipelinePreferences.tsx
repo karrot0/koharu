@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next'
 import {
   defaultModel,
   modelNames,
-  modelOptions,
   replaceStage,
   stageModel,
   type ModelName,
@@ -20,7 +19,7 @@ import {
   PreferenceSection,
   TextField,
 } from '@/components/preferences/PreferenceFields'
-import type { PipelineConfig } from '@koharu/bridge/protocol'
+import type { PipelineConfig, ProcessorCatalog } from '@koharu/bridge/protocol'
 import {
   Select,
   SelectContent,
@@ -37,9 +36,12 @@ const stages = [
 
 export function PipelinePreferences({
   value,
+  processors,
   onChange,
 }: {
   value: PipelineConfig
+  /** The processors this build can run, reported by the native side. */
+  processors: ProcessorCatalog
   onChange: (value: PipelineConfig) => void
 }) {
   const { t } = useTranslation()
@@ -51,6 +53,7 @@ export function PipelinePreferences({
       <PreferenceSection title={t('settings.pipeline.processing')}>
         {stages.map(([stage, Icon]) => {
           const model = stageModel(value, stage)
+          const options = processors[stage] as ModelName[]
           const title = t(`settings.pipeline.stages.${stage}.title`)
           return (
             <PreferenceRow
@@ -64,9 +67,7 @@ export function PipelinePreferences({
                   <Icon className='size-3.5 shrink-0 text-muted-foreground' />
                   <Select
                     value={model.model}
-                    items={Object.fromEntries(
-                      modelOptions[stage].map((name) => [name, modelNames[name]]),
-                    )}
+                    items={Object.fromEntries(options.map((name) => [name, modelNames[name]]))}
                     onValueChange={(name) => {
                       if (name) {
                         onChange(replaceStage(value, stage, defaultModel(name as ModelName)))
@@ -80,7 +81,7 @@ export function PipelinePreferences({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {modelOptions[stage].map((name) => (
+                      {options.map((name) => (
                         <SelectItem key={name} value={name}>
                           {modelNames[name]}
                         </SelectItem>

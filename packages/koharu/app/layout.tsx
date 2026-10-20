@@ -1,6 +1,6 @@
-import type { Metadata } from 'next'
-import localFont from 'next/font/local'
+import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from 'next-themes'
+import localFont from 'next/font/local'
 
 import './globals.css'
 import Providers from '@/app/providers'
@@ -13,6 +13,16 @@ const notoSansCJK = localFont({
 
 export const metadata: Metadata = {
   title: 'Koharu',
+}
+
+// Fill the whole screen on iOS (content keeps clear of the notch and home indicator through
+// safe-area insets) and leave pinch zoom to the canvas instead of the page.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 }
 
 function RootLayout({

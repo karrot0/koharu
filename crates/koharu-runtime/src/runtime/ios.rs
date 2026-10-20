@@ -1,7 +1,7 @@
-//! iOS executes only code that is signed into the app bundle, so the Torch, llama.cpp, and
-//! stable-diffusion.cpp packages ship as XCFrameworks that the iOS build embeds. Each package
-//! repository publishes them beside its desktop archives under the same release, and the app
-//! resolves them from the bundle instead of the download store.
+//! iOS executes only code that is signed into the app bundle, so the llama.cpp and
+//! stable-diffusion.cpp packages ship as XCFrameworks that the iOS build embeds, and the app
+//! resolves them from the bundle instead of the download store. iOS runs detection through
+//! Core ML, so it embeds no Torch runtime.
 
 use std::path::Path;
 #[cfg(target_os = "ios")]
@@ -11,19 +11,23 @@ use anyhow::{Context, Result};
 
 use crate::{
     download,
-    runtime::packages::{diffusion, llama, torch},
+    runtime::packages::{diffusion, llama},
     source::extract,
 };
 
 const PATTERNS: &[&str] = &["*.xcframework/**", "**/*.xcframework/**"];
 const STAMP: &str = ".releases";
 
-// Assets follow each repository's `<target>-<backend>` naming; Torch runs on the CPU on iOS.
-const ARCHIVES: [(&str, &str, &str); 3] = [
-    ("torch", torch::RELEASE, "aarch64-apple-ios-cpu.tar.gz"),
-    ("llama", llama::RELEASE, "aarch64-apple-ios-metal.tar.gz"),
+// The karrot0 forks publish the iOS packages under the same release tags as the desktop pins,
+// built from the same upstream sources, so the generated bindings match both.
+const ARCHIVES: [(&str, &str, &str); 2] = [
     (
-        "diffusion",
+        "karrot0/llama",
+        llama::RELEASE,
+        "aarch64-apple-ios-metal.tar.gz",
+    ),
+    (
+        "karrot0/diffusion",
         diffusion::RELEASE,
         "aarch64-apple-ios-metal.tar.gz",
     ),
@@ -51,9 +55,7 @@ pub async fn stage_frameworks(destination: &Path) -> Result<()> {
     std::fs::create_dir_all(destination)?;
 
     for (repository, release, asset) in ARCHIVES {
-        let url = format!(
-            "https://github.com/koharu-rs/{repository}/releases/download/{release}/{asset}"
-        );
+        let url = format!("https://github.com/{repository}/releases/download/{release}/{asset}");
         let archive = tempfile::Builder::new().suffix(".tar.gz").tempfile()?;
         download::fetch(&url, archive.path()).await?;
         extract(archive.path(), destination, PATTERNS)

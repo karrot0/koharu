@@ -4,6 +4,7 @@ use specta::Type;
 use strum::{Display, EnumIter, EnumString, IntoStaticStr, VariantArray};
 
 use crate::{
+    apple::AppleConfig,
     local::LocalConfig,
     remote::{
         CaiyunConfig, ClaudeConfig, DeepLConfig, DeepSeekConfig, GeminiConfig, GoogleCloudConfig,
@@ -193,10 +194,24 @@ define_providers! {
         field: caiyun,
         config: CaiyunConfig,
     }
+    Apple {
+        id: "apple",
+        name: "Apple Translation",
+        field: apple,
+        config: AppleConfig,
+    }
 }
 
 impl ProvidersConfig {
     pub fn load() -> anyhow::Result<koharu_config::Config<Self>> {
         koharu_config::load("providers")
+    }
+}
+
+impl Provider {
+    /// Whether the provider authenticates with a stored API key. On-device providers do not.
+    #[must_use]
+    pub const fn takes_credential(self) -> bool {
+        !matches!(self, Self::Local | Self::Apple)
     }
 }

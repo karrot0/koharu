@@ -62,7 +62,7 @@ export function PreferenceRow({
 }) {
   return (
     <div
-      className={`grid grid-cols-[minmax(150px,0.9fr)_minmax(220px,1.1fr)] gap-6 py-3.5 ${align === 'start' ? 'items-start' : 'items-center'}`}
+      className={`grid grid-cols-[minmax(150px,0.9fr)_minmax(220px,1.1fr)] gap-6 py-3.5 max-sm:grid-cols-1 max-sm:gap-2 ${align === 'start' ? 'items-start' : 'items-center'}`}
     >
       <div>
         <p className='text-[12px] font-medium'>{title}</p>

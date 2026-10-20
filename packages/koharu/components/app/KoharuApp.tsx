@@ -31,7 +31,7 @@ export function KoharuApp() {
   return (
     <div
       className={cn(
-        'relative flex h-screen w-screen flex-col overflow-hidden text-foreground',
+        'safe-area relative flex h-dvh w-screen flex-col overflow-hidden text-foreground',
         editorOpen ? 'bg-transparent' : 'bg-[var(--surface-titlebar)]',
       )}
     >
