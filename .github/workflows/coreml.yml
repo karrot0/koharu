@@ -41,7 +41,7 @@ jobs:
   verify:
     name: Verify and publish
     needs: convert
-    runs-on: macos-latest
+    runs-on: macos-26-intel
     permissions:
       contents: write
     steps:
@@ -53,8 +53,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Install converter dependencies
-        run: python -m pip install -r crates/koharu-ml/coreml/requirements.txt
+      # Verification compares against the PyTorch outputs recorded by `convert`, so it needs no
+      # PyTorch, which has no Intel macOS wheels.
+      - name: Install verifier dependencies
+        run: python -m pip install -c crates/koharu-ml/coreml/requirements.txt coremltools numpy pillow
       # Core ML only runs on Apple platforms, so the comparison against PyTorch happens here.
       - name: Verify against PyTorch
         run: python "$CONVERTER" verify --out build

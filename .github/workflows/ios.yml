@@ -20,7 +20,7 @@ env:
 jobs:
   testflight:
     name: TestFlight
-    runs-on: macos-latest
+    runs-on: macos-26-intel
     env:
       # An App Store Connect API key with the Admin role lets Xcode create the distribution
       # certificate and provisioning profile itself, so no signing files are stored here.

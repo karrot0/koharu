@@ -20,8 +20,6 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-import torch
-import torch.nn.functional as F
 from PIL import Image
 
 REPOSITORY = "mayocream/koharu-layout-rfdetr-seg-2xl-1152"
@@ -38,6 +36,9 @@ STD = [0.229, 0.224, 0.225]
 
 def preprocess(image: Image.Image) -> torch.Tensor:
     """Koharu's preprocessing: bilinear resize without antialiasing, then ImageNet norm."""
+    import torch
+    import torch.nn.functional as F
+
     pixels = torch.from_numpy(np.asarray(image.convert("RGB"))).permute(2, 0, 1)[None].float() / 255
     pixels = F.interpolate(
         pixels, size=(RESOLUTION, RESOLUTION), mode="bilinear", align_corners=False, antialias=False
@@ -92,6 +93,8 @@ def single_image_deformable_attention(
     are six-dimensional (batch, query, head, level, point, xy). The converted model always runs
     one image, so this drops the batch dimension and otherwise follows upstream step by step.
     """
+    import torch
+    import torch.nn.functional as F
     from rfdetr.utilities.tensors import _bilinear_grid_sample
 
     batch_size, len_query, _ = query.shape
@@ -139,20 +142,21 @@ def single_image_deformable_attention(
     return self.output_proj(output.transpose(1, 2).contiguous())
 
 
-class Exported(torch.nn.Module):
-    """rfdetr's export forward, reordered to Koharu's (logits, boxes, masks) outputs."""
-
-    def __init__(self, network: torch.nn.Module):
-        super().__init__()
-        self.network = network
-
-    def forward(self, pixel_values: torch.Tensor):
-        boxes, logits, masks = self.network(pixel_values)
-        return logits, boxes, masks
-
-
 def convert(image: Path, out: Path) -> None:
     import coremltools as ct
+    import torch
+    import torch.nn.functional as F
+
+    class Exported(torch.nn.Module):
+        """rfdetr's export forward, reordered to Koharu's (logits, boxes, masks) outputs."""
+
+        def __init__(self, network: torch.nn.Module):
+            super().__init__()
+            self.network = network
+
+        def forward(self, pixel_values: torch.Tensor):
+            boxes, logits, masks = self.network(pixel_values)
+            return logits, boxes, masks
 
     out.mkdir(parents=True, exist_ok=True)
     pixel_values = preprocess(Image.open(image))
@@ -210,6 +214,30 @@ def convert(image: Path, out: Path) -> None:
     )
 
 
+def resize_bilinear(values: np.ndarray, height: int, width: int) -> np.ndarray:
+    """PyTorch's bilinear interpolation with align_corners=False, without antialiasing.
+
+    Written in NumPy so the macOS verify job does not need PyTorch, which no longer ships
+    Intel macOS wheels.
+    """
+
+    def axis(size: int, target: int):
+        # PyTorch computes the scale and source coordinates in float32.
+        scale = np.float32(size / target)
+        source = np.maximum((np.arange(target, dtype=np.float32) + 0.5) * scale - 0.5, 0)
+        low = source.astype(np.int64)
+        high = np.minimum(low + 1, size - 1)
+        weight = source - low.astype(np.float32)
+        return low, high, 1 - weight, weight
+
+    top, bottom, above, below = axis(values.shape[0], height)
+    left, right, before, after = axis(values.shape[1], width)
+    # Blend along x first, then y, in PyTorch's order.
+    return above[:, None] * (
+        before * values[top][:, left] + after * values[top][:, right]
+    ) + below[:, None] * (before * values[bottom][:, left] + after * values[bottom][:, right])
+
+
 def postprocess(logits, boxes, masks, width: int, height: int) -> list[dict]:
     """Koharu's RF-DETR postprocessing (processor.rs and coreml.rs)."""
     scores = 1 / (1 + np.exp(-logits[0].astype(np.float64)))
@@ -222,15 +250,7 @@ def postprocess(logits, boxes, masks, width: int, height: int) -> list[dict]:
         if not score > THRESHOLDS[label]:
             continue
         cx, cy, box_width, box_height = boxes[0, query].astype(np.float64)
-        mask = (
-            F.interpolate(
-                torch.from_numpy(masks[0, query].astype(np.float32))[None, None],
-                size=(height, width),
-                mode="bilinear",
-                align_corners=False,
-            )[0, 0]
-            > 0
-        ).numpy()
+        mask = resize_bilinear(masks[0, query].astype(np.float32), height, width) > 0
         detections.append(
             {
                 "label": CLASSES[label],
