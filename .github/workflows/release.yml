@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - '*'
+      - '!coreml-*'
+      - '!ios-*'
 
 permissions:
   actions: read
