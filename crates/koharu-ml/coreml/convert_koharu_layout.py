@@ -283,8 +283,11 @@ def verify(out: Path) -> None:
 
     reference = np.load(out / "reference.npz")
     width, height = (int(value) for value in reference["image_size"])
+    # CI's macOS runners are Intel, whose GPU path rejects this program's padded tensors
+    # ("MPSGraph doesn't support padded tensors on Intel macs") and is not a path any iPhone
+    # takes, so verify the converted program on the CPU.
     model = ct.models.MLModel(
-        str(out / f"{NAME}.mlpackage"), compute_units=ct.ComputeUnit.ALL
+        str(out / f"{NAME}.mlpackage"), compute_units=ct.ComputeUnit.CPU_ONLY
     )
     predicted = model.predict({"pixel_values": reference["pixel_values"]})
 
