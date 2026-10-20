@@ -15,14 +15,18 @@ use crate::{
     source::extract,
 };
 
-const ASSET: &str = "aarch64-apple-ios.tar.gz";
 const PATTERNS: &[&str] = &["*.xcframework/**", "**/*.xcframework/**"];
 const STAMP: &str = ".releases";
 
-const ARCHIVES: [(&str, &str); 3] = [
-    ("torch", torch::RELEASE),
-    ("llama", llama::RELEASE),
-    ("diffusion", diffusion::RELEASE),
+// Assets follow each repository's `<target>-<backend>` naming; Torch runs on the CPU on iOS.
+const ARCHIVES: [(&str, &str, &str); 3] = [
+    ("torch", torch::RELEASE, "aarch64-apple-ios-cpu.tar.gz"),
+    ("llama", llama::RELEASE, "aarch64-apple-ios-metal.tar.gz"),
+    (
+        "diffusion",
+        diffusion::RELEASE,
+        "aarch64-apple-ios-metal.tar.gz",
+    ),
 ];
 
 /// Downloads the XCFrameworks that an iOS build embeds into `destination`.
@@ -32,7 +36,7 @@ const ARCHIVES: [(&str, &str); 3] = [
 pub async fn stage_frameworks(destination: &Path) -> Result<()> {
     let releases = ARCHIVES
         .iter()
-        .map(|(repository, release)| format!("{repository} {release}\n"))
+        .map(|(repository, release, _)| format!("{repository} {release}\n"))
         .collect::<String>();
     if std::fs::read_to_string(destination.join(STAMP)).is_ok_and(|staged| staged == releases) {
         return Ok(());
@@ -46,9 +50,9 @@ pub async fn stage_frameworks(destination: &Path) -> Result<()> {
     }
     std::fs::create_dir_all(destination)?;
 
-    for (repository, release) in ARCHIVES {
+    for (repository, release, asset) in ARCHIVES {
         let url = format!(
-            "https://github.com/koharu-rs/{repository}/releases/download/{release}/{ASSET}"
+            "https://github.com/koharu-rs/{repository}/releases/download/{release}/{asset}"
         );
         let archive = tempfile::Builder::new().suffix(".tar.gz").tempfile()?;
         download::fetch(&url, archive.path()).await?;

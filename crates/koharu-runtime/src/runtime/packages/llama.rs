@@ -77,8 +77,10 @@ pub(crate) enum Llama {
         )
     )]
     MacosMetal,
-    // Like upstream llama.cpp's XCFramework, one framework carries ggml, llama, and mtmd.
-    #[strum(serialize = "ios-metal", props(libraries = "llama.framework/llama"))]
+    #[strum(
+        serialize = "ios-metal",
+        props(libraries = "llama.framework/llama,mtmd.framework/mtmd")
+    )]
     IosMetal,
 }
 

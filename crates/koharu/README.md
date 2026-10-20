@@ -54,8 +54,8 @@ bun run test
 iOS runs the same application on the system WebKit engine (wry) instead of CEF.
 Apple only executes code signed into the bundle, so Torch, llama.cpp, and
 stable-diffusion.cpp ship as embedded XCFrameworks rather than downloaded
-packages. Each package repository publishes `aarch64-apple-ios.tar.gz` beside
-its desktop archives; the iOS `beforeBuildCommand` stages them into
+packages. Each package repository publishes an `aarch64-apple-ios-*` archive
+beside its desktop archives; the iOS `beforeBuildCommand` stages them into
 `gen/frameworks`, which `tauri.ios.conf.json` embeds.
 
 Xcode Cloud builds the committed project in `gen/apple` and distributes it
