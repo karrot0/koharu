@@ -48,3 +48,29 @@ bun x tsc --noEmit -p packages/koharu/tsconfig.json
 cd packages/koharu
 bun run test
 ```
+
+## iOS
+
+iOS runs the same application on the system WebKit engine (wry) instead of CEF.
+Apple only executes code signed into the bundle, so Torch, llama.cpp, and
+stable-diffusion.cpp ship as embedded XCFrameworks rather than downloaded
+packages. Each package repository publishes `aarch64-apple-ios.tar.gz` beside
+its desktop archives; the iOS `beforeBuildCommand` stages them into
+`gen/frameworks`, which `tauri.ios.conf.json` embeds.
+
+Xcode Cloud builds the committed project in `gen/apple` and distributes it
+through TestFlight. Once, on a Mac with Xcode, generate that project with the
+Cargo-installed CLI (the build phase calls `cargo tauri`), commit it, and create
+the Xcode Cloud workflow from Xcode:
+
+```sh
+cargo tauri ios init
+```
+
+`gen/apple/ci_scripts/ci_post_clone.sh` installs Rust, bun, and the pinned
+Tauri CLI on each Xcode Cloud build, then runs the iOS `beforeBuildCommand`.
+Regenerate the project with `cargo tauri ios init` instead of editing it.
+
+llama.cpp and stable-diffusion.cpp use Metal. PyTorch builds MPS only for
+macOS, so Torch models run on the CPU. iOS cannot pick a writable folder, so
+exports are written to the app's Documents folder, which the Files app lists.

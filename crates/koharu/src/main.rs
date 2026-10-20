@@ -4,10 +4,6 @@
 mod mallinfo;
 
 use clap::Parser as _;
-use koharu::panic;
-use koharu::sentry;
-use koharu_app as app;
-use tracing_subscriber::layer::SubscriberExt as _;
 
 #[derive(clap::Parser)]
 #[command(version, about)]
@@ -27,19 +23,5 @@ async fn main() {
     }
 
     let _cli = Cli::parse();
-    let _guard = sentry::initialize();
-    panic::install();
-    tracing::subscriber::set_global_default(
-        tracing_subscriber::registry()
-            .with(
-                tracing_subscriber::filter::EnvFilter::builder()
-                    .with_default_directive(tracing::Level::INFO.into())
-                    .from_env_lossy(),
-            )
-            .with(sentry::tracing_layer())
-            .with(koharu::tracing::TimingLayer::new()),
-    )
-    .expect("failed to set the global tracing subscriber");
-    tokio::task::block_in_place(|| app::run(tauri::generate_context!()))
-        .expect("failed to run the desktop application");
+    tokio::task::block_in_place(koharu::run);
 }

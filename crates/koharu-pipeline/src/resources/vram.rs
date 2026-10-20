@@ -57,13 +57,14 @@ impl Monitor {
 
     pub(super) fn sample(&mut self, _system: SystemMemory) -> Result<Vec<DeviceResources>, String> {
         let target = &self.target;
-        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        #[cfg(not(any(all(target_os = "macos", target_arch = "aarch64"), target_os = "ios")))]
         let _ = (_system.total_bytes, _system.used_bytes);
         if target.device_type == DeviceType::Cpu || target.backend == Backend::Cpu {
             return Ok(Vec::new());
         }
 
-        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        // Apple GPUs share unified memory with the host.
+        #[cfg(any(all(target_os = "macos", target_arch = "aarch64"), target_os = "ios"))]
         if target.backend == Backend::Metal {
             return Ok(map_samples(
                 target,

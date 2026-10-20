@@ -3,16 +3,19 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use strum::EnumProperty;
 
+#[cfg(target_os = "ios")]
+use crate::runtime::ios;
 use crate::{
-    Hardware, Store, download,
+    Hardware,
     runtime::{
         DiscoverablePackage, Package, RuntimePackage, graph::Component, loader, packages::Cuda,
         sealed,
     },
-    source::extract,
 };
+#[cfg(not(target_os = "ios"))]
+use crate::{Store, download, source::extract};
 
-const RELEASE: &str = "v2.13.0.7";
+pub(crate) const RELEASE: &str = "v2.13.0.7";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, strum::Display, strum::EnumProperty)]
 pub enum Torch {
@@ -23,7 +26,10 @@ pub enum Torch {
     #[strum(props(
         windows = "libiomp5md.dll,c10.dll,torch_global_deps.dll,torch_cpu.dll,torch.dll,koharu-torch.dll",
         linux = "libgomp.so.1,libc10.so,libtorch_global_deps.so,libtorch_cpu.so,libtorch.so,libkoharu-torch.so",
-        macos = "libtorch.dylib,libtorch_global_deps.dylib,libtorch_cpu.dylib,libc10.dylib,libkoharu-torch.dylib"
+        macos = "libtorch.dylib,libtorch_global_deps.dylib,libtorch_cpu.dylib,libc10.dylib,libkoharu-torch.dylib",
+        // The iOS framework links LibTorch statically into the shim; PyTorch builds MPS only
+        // for macOS, so this package runs on the CPU.
+        ios = "koharu-torch.framework/koharu-torch"
     ))]
     Cpu,
     #[strum(
@@ -52,6 +58,8 @@ impl Torch {
             "linux"
         } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
             "macos"
+        } else if cfg!(target_os = "ios") {
+            "ios"
         } else {
             anyhow::bail!("Torch does not support this target")
         };
@@ -66,6 +74,7 @@ impl Torch {
             .is_ok_and(|names| names.into_iter().all(|name| root.join(name).is_file()))
     }
 
+    #[cfg(not(target_os = "ios"))]
     fn asset(self) -> Result<String> {
         let target = if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
             "x86_64-pc-windows-msvc"
@@ -85,6 +94,12 @@ impl Torch {
 impl sealed::Sealed for Torch {}
 
 impl Package for Torch {
+    #[cfg(target_os = "ios")]
+    async fn install(self) -> Result<PathBuf> {
+        ios::frameworks(|root| self.complete(root))
+    }
+
+    #[cfg(not(target_os = "ios"))]
     async fn install(self) -> Result<PathBuf> {
         let path = Store::root()
             .join("torch")

@@ -4,11 +4,12 @@ import { LoaderCircle } from 'lucide-react'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
 
-import { useMacOS, WindowControls } from '@/components/app/WindowChrome'
+import { WindowControls } from '@/components/app/WindowChrome'
+import { usePlatform } from '@/lib/platform'
 
 export function StartupView() {
   const { t } = useTranslation()
-  const macOS = useMacOS()
+  const platform = usePlatform()
 
   return (
     <div className='relative flex h-screen w-screen flex-col overflow-hidden bg-[var(--surface-titlebar)] text-foreground'>
@@ -17,7 +18,7 @@ export function StartupView() {
         className='grid h-10 shrink-0 grid-cols-[132px_1fr_132px] items-center border-b border-border/80 bg-[var(--surface-titlebar)] shadow-[var(--shadow-titlebar)]'
       >
         <div className='flex h-full items-center'>
-          {!macOS && (
+          {platform !== 'macos' && (
             <div className='grid h-full w-10 place-items-center rounded-br-lg'>
               <Image
                 className='pointer-events-none'
@@ -34,7 +35,7 @@ export function StartupView() {
         <div className='grid h-full place-items-center text-[11px] text-muted-foreground select-none'>
           Koharu
         </div>
-        {!macOS && <WindowControls />}
+        {platform === 'other' && <WindowControls />}
       </header>
 
       <main className='relative grid min-h-0 flex-1 place-items-center overflow-hidden bg-[var(--surface-canvas)]'>

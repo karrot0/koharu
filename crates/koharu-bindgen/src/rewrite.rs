@@ -93,6 +93,9 @@ fn loader_tokens(library_names: &[String]) -> TokenStream {
         fn __koharu_bindgen_library_file_name(library_name: &str) -> ::std::string::String {
             if cfg!(target_os = "windows") {
                 ::std::format!("{library_name}.dll")
+            } else if cfg!(target_os = "ios") {
+                // iOS loads code only from frameworks embedded in the signed app bundle.
+                ::std::format!("{library_name}.framework/{library_name}")
             } else if cfg!(target_os = "macos") {
                 ::std::format!("lib{library_name}.dylib")
             } else {
@@ -116,6 +119,8 @@ fn loader_tokens(library_names: &[String]) -> TokenStream {
             if let Some(contents) = directory.parent() {
                 paths.push(contents.join("Frameworks").join(library_file_name));
             }
+            #[cfg(target_os = "ios")]
+            paths.push(directory.join("Frameworks").join(library_file_name));
             paths.push(directory.join(library_file_name));
             paths
         }

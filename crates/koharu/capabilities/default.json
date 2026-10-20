@@ -3,6 +3,7 @@
   "identifier": "default",
   "description": "Capabilities required by the trusted Koharu editor UI.",
   "windows": ["main"],
+  "platforms": ["linux", "macOS", "windows"],
   "permissions": [
     "core:default",
     "core:window:default",

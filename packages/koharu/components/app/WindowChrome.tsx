@@ -16,19 +16,6 @@ const resizeHandles = [
   { direction: 'SouthWest', className: 'bottom-0 left-0 size-2 cursor-sw-resize' },
 ] as const
 
-export function useMacOS() {
-  const [macOS, setMacOS] = useState(false)
-
-  useEffect(() => {
-    setMacOS(
-      navigator.userAgent.includes('Macintosh') ||
-        navigator.platform.toLowerCase().startsWith('mac'),
-    )
-  }, [])
-
-  return macOS
-}
-
 export function WindowControls() {
   const { t } = useTranslation()
   const [maximized, setMaximized] = useState(false)

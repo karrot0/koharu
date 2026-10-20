@@ -5,6 +5,7 @@ pub(crate) mod fonts;
 pub(crate) mod import;
 pub(crate) mod lifecycle;
 pub(crate) mod output;
+mod picker;
 pub(crate) mod preferences;
 pub(crate) mod processing;
 pub(crate) mod project;
@@ -52,7 +53,7 @@ impl<T: IpcResponse> ChannelExt<T> for Mutex<Option<Channel<T>>> {
     }
 }
 
-pub fn bindings() -> tauri_specta::Builder<tauri_runtime_cef::CefRuntime> {
+pub fn bindings() -> tauri_specta::Builder<crate::Runtime> {
     use tauri_specta::{Builder, ErrorHandlingMode, collect_commands};
 
     Builder::new()

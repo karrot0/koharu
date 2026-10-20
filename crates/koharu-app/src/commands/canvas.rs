@@ -12,13 +12,13 @@ use tauri::{
     AppHandle, Manager as _, State,
     ipc::{Channel, IpcResponse},
 };
-use tauri_runtime_cef::CefRuntime;
 
 use super::{
     ChannelExt as _, Error, processing,
     processing::{JobChannel, JobId, Processing},
     project::{CurrentProject, Page, Project, RasterStrokeMode},
 };
+use crate::Runtime;
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Type)]
 pub struct Point {
@@ -317,7 +317,7 @@ pub(crate) async fn commit_inpaint(
     expected_revision: Revision,
     points: Vec<Point>,
     diameter: f32,
-    handle: AppHandle<CefRuntime>,
+    handle: AppHandle<Runtime>,
     project: State<'_, CurrentProject>,
 ) -> Result<Option<JobId>, Error> {
     if !diameter.is_finite() || diameter <= 0.0 || points.is_empty() {

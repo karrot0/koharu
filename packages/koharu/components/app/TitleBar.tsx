@@ -7,9 +7,10 @@ import { useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AboutDialog } from '@/components/app/AboutDialog'
-import { useMacOS, WindowControls } from '@/components/app/WindowChrome'
+import { WindowControls } from '@/components/app/WindowChrome'
 import { call } from '@/lib/backend'
 import { selectableLayer } from '@/lib/geometry'
+import { usePlatform } from '@/lib/platform'
 import {
   pageKey,
   pagesKey,
@@ -40,7 +41,7 @@ import { cn } from '@koharu/ui/lib/utils'
 export function TitleBar() {
   const { t } = useTranslation()
   const [aboutOpen, setAboutOpen] = useState(false)
-  const macOS = useMacOS()
+  const platform = usePlatform()
   const project = useProject().data
   const pagesQuery = usePages(Boolean(project))
   const pageQuery = usePage(Boolean(project))
@@ -69,7 +70,7 @@ export function TitleBar() {
         data-tauri-drag-region='deep'
         className='relative flex h-10 shrink-0 items-center bg-[var(--surface-titlebar)] text-[12px]'
       >
-        {macOS ? (
+        {platform === 'macos' ? (
           <div className='w-[84px] shrink-0' />
         ) : (
           <div className='relative z-10 flex h-full w-10 shrink-0 items-center justify-center rounded-br-lg'>
@@ -102,10 +103,12 @@ export function TitleBar() {
                     <FilePlus2 />
                     {t('navigator.importFiles')}
                   </MenubarItem>
-                  <MenubarItem disabled={importing} onClick={() => importPages('folder')}>
-                    <FolderOpen />
-                    {t('navigator.importFolder')}
-                  </MenubarItem>
+                  {platform !== 'ios' && (
+                    <MenubarItem disabled={importing} onClick={() => importPages('folder')}>
+                      <FolderOpen />
+                      {t('navigator.importFolder')}
+                    </MenubarItem>
+                  )}
                 </MenubarSubContent>
               </MenubarSub>
               <MenubarSub>
@@ -279,7 +282,7 @@ export function TitleBar() {
           )}
         </div>
 
-        {!macOS && <WindowControls />}
+        {platform === 'other' && <WindowControls />}
       </header>
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
     </>

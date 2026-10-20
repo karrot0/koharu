@@ -65,7 +65,14 @@ static CREDENTIAL_STORE: LazyLock<Result<(), String>> = LazyLock::new(|| {
             .map(|store| keyring_core::set_default_store(store))
             .map_err(|error| error.to_string())
     }
-    #[cfg(not(target_os = "linux"))]
+    // iOS has no login keychain; the app-scoped Protected Data store is its credential store.
+    #[cfg(target_os = "ios")]
+    {
+        apple_native_keyring_store::protected::Store::new()
+            .map(|store| keyring_core::set_default_store(store))
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "ios")))]
     Ok(())
 });
 
@@ -96,11 +103,11 @@ pub fn delete(key: &str) -> anyhow::Result<()> {
 fn entry(key: &str) -> anyhow::Result<Entry> {
     match &*CREDENTIAL_STORE {
         Ok(()) => {}
-        Err(error) => anyhow::bail!("failed to initialize Linux Keyutils: {error}"),
+        Err(error) => anyhow::bail!("failed to initialize the credential store: {error}"),
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "ios"))]
     let entry = Entry::new(SERVICE, key)?;
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "ios")))]
     let entry = keyring::Entry::new(SERVICE, key)?.inner;
     Ok(entry)
 }

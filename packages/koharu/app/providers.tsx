@@ -10,6 +10,7 @@ import { Updater } from '@/components/app/Updater'
 import ClientOnly from '@/components/ClientOnly'
 import { refreshTranslationModels } from '@/lib/backend'
 import i18n from '@/lib/i18n'
+import { usePlatform } from '@/lib/platform'
 import { pageKey, pagesKey, projectKey, queryClient, refresh } from '@/lib/queries'
 import {
   receiveCanvas,
@@ -121,10 +122,12 @@ export function Providers({ children }: { children: ReactNode }) {
 
 function StartupBoundary({ children }: { children: ReactNode }) {
   const initialized = useKoharuStore((state) => state.initialized)
+  // iOS apps update through the App Store.
+  const platform = usePlatform()
   return initialized ? (
     <>
       {children}
-      <Updater />
+      {platform !== null && platform !== 'ios' && <Updater />}
     </>
   ) : (
     <StartupView />

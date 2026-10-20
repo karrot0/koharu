@@ -11,8 +11,8 @@ use schemars::{JsonSchema, schema_for};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Manager as _};
-use tauri_runtime_cef::CefRuntime;
 
+use crate::Runtime;
 use crate::commands::{
     ChannelExt as _,
     canvas::{CanvasChannel, Point},
@@ -25,11 +25,11 @@ use crate::commands::{
 
 #[derive(Clone)]
 pub(super) struct KoharuHost {
-    handle: AppHandle<CefRuntime>,
+    handle: AppHandle<Runtime>,
 }
 
 impl KoharuHost {
-    pub(super) fn new(handle: AppHandle<CefRuntime>) -> Self {
+    pub(super) fn new(handle: AppHandle<Runtime>) -> Self {
         Self { handle }
     }
 

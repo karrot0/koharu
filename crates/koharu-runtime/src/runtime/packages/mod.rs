@@ -1,8 +1,8 @@
 mod cuda;
-mod diffusion;
-mod llama;
+pub(crate) mod diffusion;
+pub(crate) mod llama;
 mod rocm;
-mod torch;
+pub(crate) mod torch;
 
 pub(crate) use cuda::Cuda;
 pub(crate) use diffusion::Diffusion;

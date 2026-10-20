@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "ios",
+  "description": "Capabilities required by the trusted Koharu editor UI on iOS.",
+  "windows": ["main"],
+  "platforms": ["iOS"],
+  "permissions": ["core:default", "opener:default"]
+}

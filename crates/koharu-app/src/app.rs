@@ -1,7 +1,8 @@
 use anyhow::{Context as _, Result};
 use tauri::{AppHandle, Manager as _, WindowEvent};
-use tauri_runtime_cef::{Cef, CefRuntime};
 use tokio::sync::Mutex;
+
+use crate::Runtime;
 
 use crate::commands::{
     agent::AgentState,
@@ -14,7 +15,7 @@ use crate::commands::{
     project::{CurrentProject, ProjectLibrary},
 };
 
-pub(crate) async fn initialize(handle: AppHandle<CefRuntime>) -> Result<()> {
+pub(crate) async fn initialize(handle: AppHandle<Runtime>) -> Result<()> {
     koharu_ml::init()
         .await
         .context("failed to initialize the ML runtime")?;
@@ -53,33 +54,38 @@ pub(crate) async fn initialize(handle: AppHandle<CefRuntime>) -> Result<()> {
     Ok(())
 }
 
-pub fn run(context: tauri::Context<CefRuntime>) -> Result<()> {
-    let cef = Cef::default();
-    #[cfg(debug_assertions)]
-    let cef = cef.remote_debugging(tauri_runtime_cef::RemoteDebugging::Port {
+pub fn run(context: tauri::Context<Runtime>) -> Result<()> {
+    #[cfg(not(target_os = "ios"))]
+    let runtime = tauri_runtime_cef::Cef::default();
+    #[cfg(all(not(target_os = "ios"), debug_assertions))]
+    let runtime = runtime.remote_debugging(tauri_runtime_cef::RemoteDebugging::Port {
         port: 4000,
         allowed_origins: Vec::new(),
     });
     #[cfg(target_os = "linux")]
-    let cef = cef
+    let runtime = runtime
         .enable_features(["Vulkan", "VulkanFromANGLE"])
         .command_line_args([
             ("--enable-unsafe-webgpu", None),
             ("use-angle", Some("vulkan")),
             ("--ozone-platform", Some("x11")),
         ]);
-    tauri::Builder::<CefRuntime>::new()
-        .runtime(cef)
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(tauri_plugin_log::log::LevelFilter::Info)
-                .max_file_size(1_000_000)
-                .clear_targets()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir { file_name: None },
-                ))
-                .build(),
-        )
+    #[cfg(target_os = "ios")]
+    let runtime = tauri_runtime_wry::Wry::default();
+
+    let builder = tauri::Builder::<Runtime>::new().runtime(runtime).plugin(
+        tauri_plugin_log::Builder::new()
+            .level(tauri_plugin_log::log::LevelFilter::Info)
+            .max_file_size(1_000_000)
+            .clear_targets()
+            .target(tauri_plugin_log::Target::new(
+                tauri_plugin_log::TargetKind::LogDir { file_name: None },
+            ))
+            .build(),
+    );
+    // iOS has one app instance, a system-managed window, and App Store updates.
+    #[cfg(not(target_os = "ios"))]
+    let builder = builder
         .plugin(tauri_plugin_single_instance::init(|handle, _, _| {
             if let Some(window) = handle.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -99,7 +105,12 @@ pub fn run(context: tauri::Context<CefRuntime>) -> Result<()> {
         )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(target_os = "ios")]
+    let builder = builder
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init());
+    builder
         .invoke_handler(crate::commands::bindings().invoke_handler())
         .setup(move |application| {
             #[cfg(all(target_os = "windows", not(debug_assertions)))]

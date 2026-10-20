@@ -12,22 +12,28 @@ keywords.workspace = true
 publish.workspace = true
 license.workspace = true
 
+# The iOS build links the application as a static library.
+[lib]
+crate-type = ["staticlib", "rlib"]
+
 [dependencies]
 clap = { workspace = true }
 console = { workspace = true }
 koharu-app = { workspace = true }
 log = { workspace = true }
-rfd = { workspace = true }
 sentry = { workspace = true }
 serde_json = { workspace = true }
 tauri = { workspace = true }
-tauri-runtime-cef = { workspace = true }
 tauri-plugin-opener = { workspace = true }
-tauri-plugin-process = { workspace = true }
-tauri-plugin-updater = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+[target.'cfg(not(target_os = "ios"))'.dependencies]
+rfd = { workspace = true }
+tauri-runtime-cef = { workspace = true }
+tauri-plugin-process = { workspace = true }
+tauri-plugin-updater = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { workspace = true, features = ["Win32_System_Console"] }

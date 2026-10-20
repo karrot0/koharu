@@ -39,8 +39,9 @@ target/
 # Python
 .venv/
 
-# Tauri
-gen/
+# Tauri; Xcode Cloud builds the committed iOS project
+**/gen/*
+!/crates/koharu/gen/apple/
 
 # Temporary files
 temp/

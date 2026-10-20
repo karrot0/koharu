@@ -22,6 +22,8 @@ pub fn install() {
             client.flush(Some(Duration::from_secs(2)));
         }
 
+        // iOS reports the crash through the system; there is no dialog outside the app UI.
+        #[cfg(not(target_os = "ios"))]
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Error)
             .set_title("Koharu has stopped")

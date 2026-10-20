@@ -8,11 +8,11 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, Manager as _, State, ipc::Channel};
-use tauri_runtime_cef::CefRuntime;
 use tokio::sync::Notify;
 
 use self::host::KoharuHost;
 use super::Error;
+use crate::Runtime;
 
 #[derive(Clone, Debug, Serialize, Type)]
 pub struct AgentStatus {
@@ -30,7 +30,7 @@ pub(crate) struct AgentState {
 }
 
 impl AgentState {
-    pub(crate) fn new(handle: AppHandle<CefRuntime>) -> Result<Self> {
+    pub(crate) fn new(handle: AppHandle<Runtime>) -> Result<Self> {
         Ok(Self {
             agent: Arc::new(Agent::new(Codex::new()?, KoharuHost::new(handle))?),
             runs: Mutex::new(HashMap::new()),
@@ -157,7 +157,7 @@ pub(crate) async fn save_agent_config(
 pub(crate) async fn run_agent(
     prompt: String,
     on_event: Channel<Event>,
-    handle: AppHandle<CefRuntime>,
+    handle: AppHandle<Runtime>,
     state: State<'_, AgentState>,
 ) -> std::result::Result<RunId, Error> {
     let prompt = prompt.trim().to_owned();

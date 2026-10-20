@@ -25,7 +25,10 @@ impl Hardware {
 
     fn probe() -> Self {
         let mut devices = Vec::new();
-        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        if cfg!(any(
+            all(target_os = "macos", target_arch = "aarch64"),
+            target_os = "ios"
+        )) {
             devices.push(Device {
                 description: "Metal".to_owned(),
                 device_type: DeviceType::IntegratedGpu,

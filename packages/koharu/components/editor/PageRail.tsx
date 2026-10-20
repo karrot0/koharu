@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 
 import { ResourceMonitor } from '@/components/editor/ResourceMonitor'
 import { call } from '@/lib/backend'
+import { usePlatform } from '@/lib/platform'
 import {
   pageKey,
   pagesKey,
@@ -394,6 +395,7 @@ function PageImportMenu({
   onImport: (source: PageImportSource) => void
 }) {
   const { t } = useTranslation()
+  const platform = usePlatform()
   const icon = importing ? (
     <LoaderCircle className='size-3.5 animate-spin' />
   ) : (
@@ -428,14 +430,16 @@ function PageImportMenu({
           <FilePlus2 />
           {t('navigator.importFiles')}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={importing}
-          className='min-h-7 gap-1 px-1.5 py-0.5 text-[11px] [&_svg:not([class*="size-"])]:size-3.5'
-          onClick={() => onImport('folder')}
-        >
-          <FolderOpen />
-          {t('navigator.importFolder')}
-        </DropdownMenuItem>
+        {platform !== 'ios' && (
+          <DropdownMenuItem
+            disabled={importing}
+            className='min-h-7 gap-1 px-1.5 py-0.5 text-[11px] [&_svg:not([class*="size-"])]:size-3.5'
+            onClick={() => onImport('folder')}
+          >
+            <FolderOpen />
+            {t('navigator.importFolder')}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -3,16 +3,19 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use strum::EnumProperty;
 
+#[cfg(target_os = "ios")]
+use crate::runtime::ios;
 use crate::{
-    Hardware, Store, download,
+    Hardware,
     runtime::{
         DiscoverablePackage, Package, RuntimePackage, graph::Component, loader, packages::Cuda,
         sealed,
     },
-    source::extract,
 };
+#[cfg(not(target_os = "ios"))]
+use crate::{Store, download, source::extract};
 
-const RELEASE: &str = "master-964-1d0a58a.1";
+pub(crate) const RELEASE: &str = "master-964-1d0a58a.1";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, strum::Display, strum::EnumProperty)]
 pub(crate) enum Diffusion {
@@ -74,9 +77,15 @@ pub(crate) enum Diffusion {
         )
     )]
     MacosMetal,
+    #[strum(
+        serialize = "ios-metal",
+        props(library = "stable-diffusion.framework/stable-diffusion")
+    )]
+    IosMetal,
 }
 
 impl Diffusion {
+    #[cfg(not(target_os = "ios"))]
     fn asset(self) -> &'static str {
         self.get_str("asset")
             .expect("diffusion package has an asset")
@@ -95,6 +104,12 @@ impl Diffusion {
 impl sealed::Sealed for Diffusion {}
 
 impl Package for Diffusion {
+    #[cfg(target_os = "ios")]
+    async fn install(self) -> Result<PathBuf> {
+        ios::frameworks(|root| self.complete(root))
+    }
+
+    #[cfg(not(target_os = "ios"))]
     async fn install(self) -> Result<PathBuf> {
         let target = Store::root()
             .join("diffusion")
@@ -144,6 +159,8 @@ impl DiscoverablePackage for Diffusion {
             hardware.supports_vulkan().then_some(Self::LinuxVulkan)
         } else if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
             hardware.supports_cuda().then_some(Self::LinuxCuda)
+        } else if cfg!(target_os = "ios") {
+            hardware.supports_metal().then_some(Self::IosMetal)
         } else if hardware.supports_metal() {
             Some(Self::MacosMetal)
         } else {
@@ -162,7 +179,9 @@ impl RuntimePackage for Diffusion {
                 Component::Cuda(Cuda::Blas13),
             ]),
             Self::WindowsHip | Self::LinuxHip => Ok(vec![Component::Rocm(hardware.rocm_target()?)]),
-            Self::WindowsVulkan | Self::LinuxVulkan | Self::MacosMetal => Ok(Vec::new()),
+            Self::WindowsVulkan | Self::LinuxVulkan | Self::MacosMetal | Self::IosMetal => {
+                Ok(Vec::new())
+            }
         }
     }
 

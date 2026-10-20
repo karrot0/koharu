@@ -3,16 +3,19 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use strum::EnumProperty;
 
+#[cfg(target_os = "ios")]
+use crate::runtime::ios;
 use crate::{
-    Hardware, Store, download,
+    Hardware,
     runtime::{
         DiscoverablePackage, Package, RuntimePackage, graph::Component, loader, packages::Cuda,
         sealed,
     },
-    source::extract,
 };
+#[cfg(not(target_os = "ios"))]
+use crate::{Store, download, source::extract};
 
-const RELEASE: &str = "b11642";
+pub(crate) const RELEASE: &str = "b11642";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, strum::Display, strum::EnumProperty)]
 pub(crate) enum Llama {
@@ -74,9 +77,13 @@ pub(crate) enum Llama {
         )
     )]
     MacosMetal,
+    // Like upstream llama.cpp's XCFramework, one framework carries ggml, llama, and mtmd.
+    #[strum(serialize = "ios-metal", props(libraries = "llama.framework/llama"))]
+    IosMetal,
 }
 
 impl Llama {
+    #[cfg(not(target_os = "ios"))]
     fn asset(self) -> &'static str {
         self.get_str("asset").expect("llama package has an asset")
     }
@@ -95,6 +102,12 @@ impl Llama {
 impl sealed::Sealed for Llama {}
 
 impl Package for Llama {
+    #[cfg(target_os = "ios")]
+    async fn install(self) -> Result<PathBuf> {
+        ios::frameworks(|root| self.complete(root))
+    }
+
+    #[cfg(not(target_os = "ios"))]
     async fn install(self) -> Result<PathBuf> {
         let target = Store::root()
             .join("llama")
@@ -144,6 +157,8 @@ impl DiscoverablePackage for Llama {
             hardware.supports_vulkan().then_some(Self::LinuxVulkan)
         } else if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
             hardware.supports_cuda().then_some(Self::LinuxCuda)
+        } else if cfg!(target_os = "ios") {
+            hardware.supports_metal().then_some(Self::IosMetal)
         } else if hardware.supports_metal() {
             Some(Self::MacosMetal)
         } else {
@@ -162,7 +177,9 @@ impl RuntimePackage for Llama {
                 Component::Cuda(Cuda::Blas13),
             ]),
             Self::WindowsHip | Self::LinuxHip => Ok(vec![Component::Rocm(hardware.rocm_target()?)]),
-            Self::WindowsVulkan | Self::LinuxVulkan | Self::MacosMetal => Ok(Vec::new()),
+            Self::WindowsVulkan | Self::LinuxVulkan | Self::MacosMetal | Self::IosMetal => {
+                Ok(Vec::new())
+            }
         }
     }
 

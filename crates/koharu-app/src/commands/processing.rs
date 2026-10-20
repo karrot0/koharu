@@ -7,10 +7,10 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager as _, State, ipc::Channel};
-use tauri_runtime_cef::CefRuntime;
 use uuid::Uuid;
 
 use super::{ChannelExt as _, Error, canvas::CanvasChannel, project::CurrentProject};
+use crate::Runtime;
 use koharu_desktop::Desktop;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, Type)]
@@ -75,7 +75,7 @@ pub(crate) struct JobChannel {
 #[specta::specta]
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn process(
-    handle: AppHandle<CefRuntime>,
+    handle: AppHandle<Runtime>,
     scope: koharu_pipeline::Scope,
     operation: koharu_pipeline::Operation,
     project: State<'_, CurrentProject>,
@@ -169,7 +169,7 @@ pub(crate) async fn process(
         }));
 
         struct PipelineCommitter {
-            handle: AppHandle<CefRuntime>,
+            handle: AppHandle<Runtime>,
         }
 
         #[async_trait::async_trait]
