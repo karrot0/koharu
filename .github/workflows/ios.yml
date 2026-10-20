@@ -1,0 +1,84 @@
+name: iOS
+
+# Push a tag such as `ios-1` to build the app and upload it to TestFlight.
+on:
+  push:
+    tags: ['ios-*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  testflight:
+    name: TestFlight
+    runs-on: macos-latest
+    env:
+      # An App Store Connect API key with the Admin role lets Xcode create the distribution
+      # certificate and provisioning profile itself, so no signing files are stored here.
+      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: oven-sh/setup-bun@v2
+      - run: rustup target add aarch64-apple-ios
+      - run: brew install xcodegen
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: koharu-ios
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ios-bun-${{ hashFiles('**/bun.lock') }}
+      # The root postinstall installs the pinned Tauri CLI.
+      - run: bun install
+
+      - name: Install the App Store Connect key
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          directory="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$directory"
+          printf '%s\n' "$APPLE_API_KEY_P8" > "$directory/AuthKey_$APPLE_API_KEY.p8"
+          printf 'APPLE_API_KEY_PATH=%s\n' "$directory/AuthKey_$APPLE_API_KEY.p8" >> "$GITHUB_ENV"
+
+      - name: Generate the Xcode project
+        run: cargo tauri ios init --ci
+
+      # Runs the iOS beforeBuildCommand, which stages the runtime XCFrameworks and builds the
+      # frontend before Xcode compiles and signs the app.
+      - name: Build the IPA
+        run: >-
+          cargo tauri ios build --ci
+          --export-method app-store-connect
+          --build-number ${{ github.run_number }}
+
+      - name: Find the IPA
+        run: |
+          ipa=$(find crates/koharu/gen/apple/build -name '*.ipa' -print -quit)
+          test -n "$ipa"
+          printf 'IPA=%s\n' "$ipa" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: koharu-ios
+          path: ${{ env.IPA }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload to TestFlight
+        run: >-
+          xcrun altool --upload-app --type ios
+          --file "$IPA"
+          --apiKey "$APPLE_API_KEY"
+          --apiIssuer "$APPLE_API_ISSUER"

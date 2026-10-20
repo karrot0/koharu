@@ -58,18 +58,12 @@ packages. Each package repository publishes an `aarch64-apple-ios-*` archive
 beside its desktop archives; the iOS `beforeBuildCommand` stages them into
 `gen/frameworks`, which `tauri.ios.conf.json` embeds.
 
-Xcode Cloud builds the committed project in `gen/apple` and distributes it
-through TestFlight. Once, on a Mac with Xcode, generate that project with the
-Cargo-installed CLI (the build phase calls `cargo tauri`), commit it, and create
-the Xcode Cloud workflow from Xcode:
-
-```sh
-cargo tauri ios init
-```
-
-`gen/apple/ci_scripts/ci_post_clone.sh` installs Rust, bun, and the pinned
-Tauri CLI on each Xcode Cloud build, then runs the iOS `beforeBuildCommand`.
-Regenerate the project with `cargo tauri ios init` instead of editing it.
+The `iOS` workflow builds on a GitHub macOS runner: it generates the Xcode
+project with `cargo tauri ios init`, builds and signs the IPA, and uploads it to
+TestFlight. Push a tag such as `ios-1` to run it. Signing uses an App Store
+Connect API key with the Admin role, stored as the `APPLE_API_KEY`,
+`APPLE_API_ISSUER`, and `APPLE_API_KEY_P8` secrets beside
+`APPLE_DEVELOPMENT_TEAM`.
 
 llama.cpp and stable-diffusion.cpp use Metal. PyTorch builds MPS only for
 macOS, so Torch models run on the CPU. iOS cannot pick a writable folder, so
