@@ -41,7 +41,9 @@ jobs:
   verify:
     name: Verify and publish
     needs: convert
-    runs-on: macos-26-intel
+    # Core ML on the Intel runners' virtual GPU fails on this program, and their CPU path
+    # crashes, so verification needs Apple silicon.
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
