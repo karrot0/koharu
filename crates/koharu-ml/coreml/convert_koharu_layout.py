@@ -202,7 +202,9 @@ def convert(image: Path, out: Path) -> None:
         ],
         convert_to="mlprogram",
         minimum_deployment_target=ct.target.iOS18,
-        compute_precision=ct.precision.FLOAT16,
+        # Float16 compute reorders the two-stage proposal selection: on a real page, scores drift
+        # by up to 0.17 against PyTorch and extra detections cross the thresholds.
+        compute_precision=ct.precision.FLOAT32,
     )
     package.short_description = f"{REPOSITORY}@{REVISION}"
     package.save(str(out / f"{NAME}.mlpackage"))
