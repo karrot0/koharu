@@ -61,7 +61,7 @@ jobs:
         run: python -m pip install -c crates/koharu-ml/coreml/requirements.txt coremltools numpy pillow
       # Core ML only runs on Apple platforms, so the comparison against PyTorch happens here.
       - name: Verify against PyTorch
-        run: python "$CONVERTER" verify --out build
+        run: python -X faulthandler "$CONVERTER" verify --out build
       - name: Compile for iOS
         run: |
           xcrun coremlcompiler compile "build/$NAME.mlpackage" build/compiled
