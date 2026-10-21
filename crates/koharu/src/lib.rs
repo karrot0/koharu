@@ -27,7 +27,10 @@ pub fn run() {
 /// The iOS host calls this instead of `main`.
 #[cfg(target_os = "ios")]
 #[tauri::mobile_entry_point]
-async fn start() {
+fn start() {
+    // SAFETY: the iOS host calls this on its main thread before Koharu starts any other thread,
+    // which is why this entry point is not `async`: an async one runs on the started runtime.
+    unsafe { koharu_runtime::ios::configure_downloads() };
     // Desktop runs the event loop inside a Tokio runtime context; keep that true on iOS.
-    tokio::task::block_in_place(run);
+    tauri::async_runtime::block_on(async { tokio::task::block_in_place(run) });
 }

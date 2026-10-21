@@ -33,6 +33,21 @@ const ARCHIVES: [(&str, &str, &str); 2] = [
     ),
 ];
 
+/// Points Hugging Face's Xet downloader at the package store.
+///
+/// Xet keeps its shard cache and staging files in `~/.cache/huggingface/xet` unless
+/// `HF_XET_CACHE` says otherwise, `hf-hub` offers no other way to set it, and an iOS app cannot
+/// write to its container's home.
+///
+/// # Safety
+///
+/// This sets a process environment variable, so it must run before any other thread starts.
+#[cfg(target_os = "ios")]
+pub unsafe fn configure_downloads() {
+    // SAFETY: the caller guarantees that no other thread reads or writes the environment yet.
+    unsafe { std::env::set_var("HF_XET_CACHE", crate::Store::root().join("xet")) }
+}
+
 /// Downloads the XCFrameworks that an iOS build embeds into `destination`.
 ///
 /// The directory is replaced whenever a package release changes so a bundle never mixes

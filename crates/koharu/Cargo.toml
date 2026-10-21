@@ -35,6 +35,9 @@ tauri-runtime-cef = { workspace = true }
 tauri-plugin-process = { workspace = true }
 tauri-plugin-updater = { workspace = true }
 
+[target.'cfg(target_os = "ios")'.dependencies]
+koharu-runtime = { workspace = true }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { workspace = true, features = ["Win32_System_Console"] }
 
