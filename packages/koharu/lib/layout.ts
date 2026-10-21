@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
-// Below this width the three-panel editor leaves the canvas too little room: phones, and
-// tablets in portrait.
+// Below this width the three-panel editor leaves the canvas too little room: iPhones, and iPads
+// in portrait.
 const compactQuery = '(max-width: 1023px)'
 
 function subscribe(onChange: () => void) {
@@ -10,7 +10,7 @@ function subscribe(onChange: () => void) {
   return () => query.removeEventListener('change', onChange)
 }
 
-/** Whether the editor shows only the canvas, with its side panels in sheets. */
+/** Whether the iOS editor shows only the canvas, with pages and properties in sheets. */
 export function useCompactLayout() {
   return useSyncExternalStore(
     subscribe,

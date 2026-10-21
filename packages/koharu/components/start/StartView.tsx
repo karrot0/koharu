@@ -1,13 +1,11 @@
 'use client'
 
 import { Folder, FolderPlus, Plus, Settings, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { call } from '@/lib/backend'
-import { pageKey, pagesKey, projectKey, refresh } from '@/lib/queries'
+import { useProjectLibrary } from '@/lib/projects'
 import { useKoharuStore } from '@/lib/store'
-import { commands, type ProjectSummary } from '@koharu/bridge/protocol'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,60 +25,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@koharu/ui/components/t
 export function StartView() {
   const { t } = useTranslation()
   const setSettingsOpen = useKoharuStore((state) => state.setSettingsOpen)
-  const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const { projects, busy, createProject, openProject, deleteProject } = useProjectLibrary()
   const [name, setName] = useState('')
-  const [busy, setBusy] = useState<string | null>('list')
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
 
-  const reload = useCallback(async () => {
-    setBusy('list')
-    try {
-      setProjects(await call(commands.listProjects))
-    } finally {
-      setBusy(null)
-    }
-  }, [])
-
-  useEffect(() => {
-    void reload().catch(() => undefined)
-  }, [reload])
-
-  const createProject = async (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     const projectName = name.trim()
-    if (!projectName || busy) return
-    setBusy('create')
-    try {
-      await call(commands.createProject, projectName)
-      await refresh(projectKey, pagesKey, pageKey)
-      setName('')
-    } finally {
-      setBusy(null)
-    }
+    if (projectName && (await createProject(projectName))) setName('')
   }
 
-  const openProject = async (projectName: string) => {
-    if (busy) return
-    setBusy(projectName)
-    try {
-      await call(commands.openProject, projectName)
-      await refresh(projectKey, pagesKey, pageKey)
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const deleteProject = async () => {
-    const projectName = projectToDelete
-    if (busy || !projectName) return
-    setBusy(projectName)
-    try {
-      await call(commands.deleteProject, projectName)
-      await reload()
-      setProjectToDelete(null)
-    } finally {
-      setBusy(null)
-    }
+  const confirmDelete = async () => {
+    if (projectToDelete && (await deleteProject(projectToDelete))) setProjectToDelete(null)
   }
 
   return (
@@ -136,7 +92,10 @@ export function StartView() {
                   {t('start.newDescription')}
                 </p>
 
-                <form className='mt-6 grid gap-2.5' onSubmit={createProject}>
+                <form
+                  className='mt-6 grid gap-2.5'
+                  onSubmit={(event) => void submit(event).catch(() => undefined)}
+                >
                   <label htmlFor='project-name' className='text-[10px] font-medium text-foreground'>
                     {t('start.projectName')}
                   </label>
@@ -266,7 +225,7 @@ export function StartView() {
             variant='destructive'
             disabled={busy !== null}
             aria-busy={busy !== null}
-            onClick={() => void deleteProject().catch(() => undefined)}
+            onClick={() => void confirmDelete().catch(() => undefined)}
           >
             {busy !== null ? t('start.deleting') : t('start.deleteAction')}
           </AlertDialogAction>

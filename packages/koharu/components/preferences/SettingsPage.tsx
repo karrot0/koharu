@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from '@koharu/ui/components/select'
 
-const tabs = [
+export const settingsTabs = [
   ['appearance', Palette],
   ['pipeline', Cpu],
   ['providers', KeyRound],
@@ -53,15 +53,17 @@ const tabs = [
   ['typesetting', Type],
   ['shortcuts', Keyboard],
 ] as const
-type Tab = (typeof tabs)[number][0]
+export type SettingsTab = (typeof settingsTabs)[number][0]
+export type SettingsDraft = ReturnType<typeof useSettingsDraft>
 
-export function SettingsPage() {
-  const { t } = useTranslation()
+/**
+ * The editable copy of the saved preferences while settings are open. Edits save after a short
+ * pause; `flush` saves immediately, and a pending edit is also saved when settings close.
+ */
+export function useSettingsDraft() {
   const open = useKoharuStore((state) => state.settingsOpen)
-  const setOpen = useKoharuStore((state) => state.setSettingsOpen)
   const preferences = useKoharuStore((state) => state.preferences)
   const translationModels = useKoharuStore((state) => state.translationModels)
-  const [tab, setTab] = useState<Tab>('appearance')
   const [pipeline, setPipeline] = useState<PipelineConfig | null>(preferences?.pipeline ?? null)
   const [providers, setProviders] = useState<ProviderSettings | null>(
     preferences?.providers ?? null,
@@ -69,7 +71,6 @@ export function SettingsPage() {
   const [typesetting, setTypesetting] = useState<TypesettingConfig | null>(
     preferences?.typesetting ?? null,
   )
-  const translation = pipeline?.translation ?? null
   const lastSaved = useRef<string | null>(null)
   const lastSavedProviders = useRef<string | null>(null)
   const saveGeneration = useRef(0)
@@ -120,10 +121,18 @@ export function SettingsPage() {
     [],
   )
 
+  const flush = useCallback(async () => {
+    if (pipeline && providers && typesetting) await saveDraft(pipeline, providers, typesetting)
+  }, [pipeline, providers, saveDraft, typesetting])
+  const latestFlush = useRef(flush)
+  latestFlush.current = flush
+
   useEffect(() => {
     if (!open) return
     void refreshPreferences().catch(() => undefined)
     void refreshTranslationModels().catch(() => undefined)
+    // Leaving settings by any route saves an edit still waiting for its pause.
+    return () => void latestFlush.current().catch(() => undefined)
   }, [open])
 
   useEffect(() => {
@@ -151,39 +160,56 @@ export function SettingsPage() {
     return () => window.clearTimeout(timeout)
   }, [open, pipeline, providers, saveDraft, typesetting])
 
-  if (!open) return null
+  return {
+    open,
+    preferences,
+    translationModels,
+    pipeline,
+    setPipeline,
+    providers,
+    setProviders,
+    typesetting,
+    setTypesetting,
+    flush,
+  }
+}
+
+export function SettingsPage() {
+  const { t } = useTranslation()
+  const setOpen = useKoharuStore((state) => state.setSettingsOpen)
+  const draft = useSettingsDraft()
+  const [tab, setTab] = useState<SettingsTab>('appearance')
+
+  if (!draft.open) return null
 
   return (
-    <section className='settings-page flex min-h-0 flex-1 bg-[var(--surface-sidebar)] text-foreground max-lg:flex-col'>
-      <nav className='flex w-64 shrink-0 flex-col bg-[var(--surface-sidebar)] px-3 py-4 max-lg:w-full max-lg:flex-row max-lg:items-center max-lg:gap-1 max-lg:overflow-x-auto max-lg:py-2'>
+    <section className='settings-page flex min-h-0 flex-1 bg-[var(--surface-sidebar)] text-foreground'>
+      <nav className='flex w-64 shrink-0 flex-col bg-[var(--surface-sidebar)] px-3 py-4'>
         <Button
           type='button'
           variant='ghost'
-          className='mb-5 h-9 shrink-0 justify-start gap-2 rounded-lg px-2 text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground max-lg:mb-0'
-          onClick={() => {
-            if (!pipeline || !providers || !typesetting) {
-              setOpen(false)
-              return
-            }
-            void saveDraft(pipeline, providers, typesetting)
+          className='mb-5 h-9 justify-start gap-2 rounded-lg px-2 text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground'
+          onClick={() =>
+            void draft
+              .flush()
               .then(() => setOpen(false))
               .catch(() => undefined)
-          }}
+          }
         >
           <ArrowLeft className='size-4' /> {t('settings.backToEditor')}
         </Button>
-        <p className='mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase max-lg:hidden'>
+        <p className='mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
           {t('settings.title')}
         </p>
-        <div className='grid gap-1 max-lg:flex'>
-          {tabs.map(([id, Icon]) => (
+        <div className='grid gap-1'>
+          {settingsTabs.map(([id, Icon]) => (
             <Button
               key={id}
               type='button'
               variant='ghost'
               size='sm'
               data-active={tab === id}
-              className='h-10 w-full justify-start gap-3 rounded-lg px-3 text-left text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground max-lg:w-auto max-lg:shrink-0'
+              className='h-10 w-full justify-start gap-3 rounded-lg px-3 text-left text-[12px] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
               onClick={() => setTab(id)}
             >
               <Icon className='size-4' /> {t(`settings.tabs.${id}`)}
@@ -191,55 +217,66 @@ export function SettingsPage() {
           ))}
         </div>
       </nav>
-      <main className='relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-tl-2xl bg-[var(--surface-canvas)] shadow-[var(--shadow-content)] max-lg:rounded-none'>
-        <header className='flex h-14 shrink-0 items-center border-b border-border/80 px-8 max-lg:hidden'>
+      <main className='relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden rounded-tl-2xl bg-[var(--surface-canvas)] shadow-[var(--shadow-content)]'>
+        <header className='flex h-14 shrink-0 items-center border-b border-border/80 px-8'>
           <h1 className='text-[13px] font-semibold tracking-[-0.02em]'>{t('settings.title')}</h1>
         </header>
         <ScrollArea className='min-h-0 flex-1'>
-          <div className='mx-auto w-full max-w-4xl px-10 py-10 max-lg:px-4 max-lg:py-6'>
-            {tab === 'appearance' && <AppearancePreferences />}
-            {tab === 'pipeline' &&
-              (pipeline && preferences ? (
-                <PipelinePreferences
-                  value={pipeline}
-                  processors={preferences.processors}
-                  onChange={setPipeline}
-                />
-              ) : (
-                <LoadingPreferences />
-              ))}
-            {tab === 'providers' &&
-              (providers ? (
-                <ProviderPreferences value={providers} onChange={setProviders} />
-              ) : (
-                <LoadingPreferences />
-              ))}
-            {tab === 'translation' &&
-              (translation ? (
-                <TranslationPreferences
-                  value={translation}
-                  modelChoices={translationModels}
-                  providers={providers?.entries ?? []}
-                  languages={preferences?.languages ?? []}
-                  onChange={(translation) =>
-                    setPipeline((current) => (current ? { ...current, translation } : current))
-                  }
-                />
-              ) : (
-                <LoadingPreferences />
-              ))}
-            {tab === 'typesetting' &&
-              (typesetting ? (
-                <TypesettingPreferences value={typesetting} onChange={setTypesetting} />
-              ) : (
-                <LoadingPreferences />
-              ))}
-            {tab === 'shortcuts' && <ShortcutPreferences />}
+          <div className='mx-auto w-full max-w-4xl px-10 py-10'>
+            <SettingsContent tab={tab} draft={draft} />
           </div>
         </ScrollArea>
       </main>
     </section>
   )
+}
+
+/** One settings section, editing the shared draft. */
+export function SettingsContent({ tab, draft }: { tab: SettingsTab; draft: SettingsDraft }) {
+  const { pipeline, providers, typesetting, preferences } = draft
+  const translation = pipeline?.translation ?? null
+  switch (tab) {
+    case 'appearance':
+      return <AppearancePreferences />
+    case 'pipeline':
+      return pipeline && preferences ? (
+        <PipelinePreferences
+          value={pipeline}
+          processors={preferences.processors}
+          onChange={draft.setPipeline}
+        />
+      ) : (
+        <LoadingPreferences />
+      )
+    case 'providers':
+      return providers ? (
+        <ProviderPreferences value={providers} onChange={draft.setProviders} />
+      ) : (
+        <LoadingPreferences />
+      )
+    case 'translation':
+      return translation ? (
+        <TranslationPreferences
+          value={translation}
+          modelChoices={draft.translationModels}
+          providers={providers?.entries ?? []}
+          languages={preferences?.languages ?? []}
+          onChange={(translation) =>
+            draft.setPipeline((current) => (current ? { ...current, translation } : current))
+          }
+        />
+      ) : (
+        <LoadingPreferences />
+      )
+    case 'typesetting':
+      return typesetting ? (
+        <TypesettingPreferences value={typesetting} onChange={draft.setTypesetting} />
+      ) : (
+        <LoadingPreferences />
+      )
+    case 'shortcuts':
+      return <ShortcutPreferences />
+  }
 }
 
 function AppearancePreferences() {

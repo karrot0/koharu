@@ -265,6 +265,14 @@
     "undo": "Undo",
     "view": "View"
   },
+  "mobile": {
+    "done": "Done",
+    "edit": "Edit",
+    "editor": "Editor",
+    "more": "More actions",
+    "noProject": "No project open",
+    "noProjectDescription": "Open or create a project in Projects."
+  },
   "model": {
     "baseUrl": "Base URL",
     "default": "Default",

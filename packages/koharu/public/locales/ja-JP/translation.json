@@ -265,6 +265,14 @@
     "undo": "元に戻す",
     "view": "表示"
   },
+  "mobile": {
+    "done": "完了",
+    "edit": "編集",
+    "editor": "エディター",
+    "more": "その他の操作",
+    "noProject": "開いているプロジェクトはありません",
+    "noProjectDescription": "「プロジェクト」でプロジェクトを開くか作成してください。"
+  },
   "model": {
     "baseUrl": "ベース URL",
     "default": "既定",

@@ -265,6 +265,14 @@
     "undo": "Desfazer",
     "view": "Exibir"
   },
+  "mobile": {
+    "done": "OK",
+    "edit": "Editar",
+    "editor": "Editor",
+    "more": "Mais ações",
+    "noProject": "Nenhum projeto aberto",
+    "noProjectDescription": "Abra ou crie um projeto em Projetos."
+  },
   "model": {
     "baseUrl": "URL base",
     "default": "Padrão",

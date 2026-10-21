@@ -265,6 +265,14 @@
     "undo": "실행 취소",
     "view": "보기"
   },
+  "mobile": {
+    "done": "완료",
+    "edit": "편집",
+    "editor": "편집기",
+    "more": "추가 작업",
+    "noProject": "열린 프로젝트가 없습니다",
+    "noProjectDescription": "프로젝트 탭에서 프로젝트를 열거나 만드세요."
+  },
   "model": {
     "baseUrl": "기본 URL",
     "default": "기본값",

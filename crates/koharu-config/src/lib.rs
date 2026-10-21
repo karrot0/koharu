@@ -31,6 +31,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use tokio::sync::watch;
 
+#[cfg(not(target_os = "ios"))]
 const CONFIG_DIRECTORY: &str = ".koharu";
 const CONFIG_FILE: &str = "config.toml";
 
@@ -371,9 +372,19 @@ impl Manager {
 }
 
 /// Returns the shared Koharu configuration path: `~/.koharu/config.toml`.
+///
+/// An iOS app cannot write to its container's home, so there the file lives in
+/// `Library/Application Support/koharu`.
 pub fn path() -> Result<PathBuf> {
-    let home = dirs::home_dir().context("could not determine the home directory")?;
-    Ok(home.join(CONFIG_DIRECTORY).join(CONFIG_FILE))
+    #[cfg(target_os = "ios")]
+    let directory = dirs::config_dir()
+        .context("could not determine the Application Support directory")?
+        .join("koharu");
+    #[cfg(not(target_os = "ios"))]
+    let directory = dirs::home_dir()
+        .context("could not determine the home directory")?
+        .join(CONFIG_DIRECTORY);
+    Ok(directory.join(CONFIG_FILE))
 }
 
 /// Load or retrieve a live, process-wide top-level configuration section.

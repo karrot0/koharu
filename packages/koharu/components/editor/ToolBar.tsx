@@ -38,6 +38,7 @@ import {
 } from '@koharu/ui/components/popover'
 import { Slider } from '@koharu/ui/components/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@koharu/ui/components/tooltip'
+import { cn } from '@koharu/ui/lib/utils'
 
 const tools = [
   ['select', MousePointer2],
@@ -49,7 +50,11 @@ const tools = [
   ['pan', Hand],
 ] as const satisfies ReadonlyArray<readonly [CanvasTool, typeof MousePointer2]>
 
-export function ToolBar() {
+/**
+ * The canvas tools: a floating vertical rail on the desktop canvas, or a horizontal strip below
+ * the canvas on iPhone.
+ */
+export function ToolBar({ orientation = 'vertical' }: { orientation?: 'vertical' | 'horizontal' }) {
   const { t } = useTranslation()
   const page = usePage().data
   const active = useKoharuStore((state) => state.tool)
@@ -58,13 +63,24 @@ export function ToolBar() {
   const setBrush = useKoharuStore((state) => state.setBrush)
   const shortcuts = useKoharuStore((state) => state.shortcuts)
   const hasBrush = isBrushTool(active)
+  const horizontal = orientation === 'horizontal'
+  const side = horizontal ? 'top' : 'right'
 
   return (
-    <aside className='absolute top-3 left-3 z-20 flex w-11 flex-col rounded-2xl border border-border bg-[var(--surface-floating)] p-1 shadow-[var(--shadow-toolrail)]'>
-      <div className='flex flex-col items-center py-0.5'>
+    <aside
+      className={cn(
+        'z-20 flex',
+        horizontal
+          ? 'h-12 shrink-0 items-center justify-center gap-1 overflow-x-auto border-t border-border/80 bg-[var(--surface-toolbar)] px-2'
+          : 'absolute top-3 left-3 w-11 flex-col rounded-2xl border border-border bg-[var(--surface-floating)] p-1 shadow-[var(--shadow-toolrail)]',
+      )}
+    >
+      <div className={cn('flex items-center', horizontal ? 'gap-0.5' : 'flex-col py-0.5')}>
         {tools.map(([tool, Icon], index) => (
           <div key={tool} className='contents'>
-            {index === tools.length - 1 && <span className='my-1 h-px w-5 bg-border' />}
+            {index === tools.length - 1 && (
+              <span className={cn('bg-border', horizontal ? 'mx-1 h-5 w-px' : 'my-1 h-px w-5')} />
+            )}
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -82,7 +98,7 @@ export function ToolBar() {
               >
                 <Icon className='size-4' />
               </TooltipTrigger>
-              <TooltipContent side='right'>
+              <TooltipContent side={side}>
                 {t(`tools.${tool}`)}
                 <span className='ml-2 opacity-60'>{shortcuts[tool].toUpperCase()}</span>
               </TooltipContent>
@@ -92,12 +108,18 @@ export function ToolBar() {
       </div>
 
       {hasBrush && (
-        <div className='flex flex-col items-center gap-1 border-t border-border/80 py-1.5'>
+        <div
+          className={cn(
+            'flex items-center gap-1 border-border/80',
+            horizontal ? 'ml-1 border-l pl-2' : 'flex-col border-t py-1.5',
+          )}
+        >
           {active === 'draw' && (
             <ColorWell value={brush.color} onChange={(color) => setBrush({ ...brush, color })} />
           )}
           <BrushSize
             value={brush.diameter}
+            side={side}
             onChange={(diameter) => setBrush({ ...brush, diameter })}
           />
         </div>
@@ -106,7 +128,15 @@ export function ToolBar() {
   )
 }
 
-function BrushSize({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+function BrushSize({
+  value,
+  side,
+  onChange,
+}: {
+  value: number
+  side: 'top' | 'right'
+  onChange: (value: number) => void
+}) {
   const { t } = useTranslation()
   const roundedValue = Math.round(value)
   const page = usePage().data
@@ -132,12 +162,12 @@ function BrushSize({ value, onChange }: { value: number; onChange: (value: numbe
             </TooltipTrigger>
           }
         />
-        <TooltipContent side='right'>
+        <TooltipContent side={side}>
           {t('tools.brushSizeShort', { size: roundedValue })}
         </TooltipContent>
       </Tooltip>
       <PopoverContent
-        side='right'
+        side={side}
         align='center'
         sideOffset={8}
         className='w-48 gap-2.5 rounded-xl p-2.5'

@@ -41,6 +41,7 @@ import {
 import { prefetchCanvasPages, workspaceColor, type CanvasColor } from '@koharu/bridge/canvas'
 import { commands, type Frame, type Point, type TransformFrame } from '@koharu/bridge/protocol'
 import { Button } from '@koharu/ui/components/button'
+import { cn } from '@koharu/ui/lib/utils'
 
 const BRUSH_DIAMETER_STEP = 4
 
@@ -80,7 +81,11 @@ interface StrokeUpdate {
   points: Point[]
 }
 
-export function CanvasWorkspace() {
+/**
+ * `panel` frames the canvas with the desktop command bar, tool rail, and zoom status bar. `touch`
+ * is the bare canvas; the iOS editor supplies its own controls around it.
+ */
+export function CanvasWorkspace({ chrome = 'panel' }: { chrome?: 'panel' | 'touch' }) {
   const { t } = useTranslation()
   const surface = useRef<HTMLDivElement>(null)
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null)
@@ -588,10 +593,15 @@ export function CanvasWorkspace() {
   }
 
   return (
-    <main className='relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-tl-2xl bg-[var(--surface-canvas)]'>
-      <CanvasCommandBar />
+    <main
+      className={cn(
+        'relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--surface-canvas)]',
+        chrome === 'panel' && 'rounded-tl-2xl',
+      )}
+    >
+      {chrome === 'panel' && <CanvasCommandBar />}
       <div className='relative flex min-h-0 min-w-0 flex-1'>
-        <ToolBar />
+        {chrome === 'panel' && <ToolBar />}
         <div
           ref={surface}
           tabIndex={0}
@@ -898,7 +908,7 @@ export function CanvasWorkspace() {
           )}
         </div>
       </div>
-      <StatusBar onZoomChange={setZoom} />
+      {chrome === 'panel' && <StatusBar onZoomChange={setZoom} />}
     </main>
   )
 }

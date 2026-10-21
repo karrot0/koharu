@@ -5,14 +5,17 @@ import { useTranslation } from 'react-i18next'
 
 import { TitleBar } from '@/components/app/TitleBar'
 import { Editor } from '@/components/editor/Editor'
+import { MobileApp } from '@/components/mobile/MobileApp'
 import { SettingsPage } from '@/components/preferences/SettingsPage'
 import { StartView } from '@/components/start/StartView'
+import { usePlatform } from '@/lib/platform'
 import { useProject } from '@/lib/queries'
 import { useKoharuStore } from '@/lib/store'
 import { cn } from '@koharu/ui/lib/utils'
 
 export function KoharuApp() {
   const { t } = useTranslation()
+  const platform = usePlatform()
   const project = useProject().data
   const selectedPages = useKoharuStore((state) => state.selectedPages)
   const selectPages = useKoharuStore((state) => state.selectPages)
@@ -28,10 +31,14 @@ export function KoharuApp() {
     selectLayers([])
   }, [activePage, projectLoaded, selectLayers, selectPages, selectedPages.length])
 
+  // The platform is known after mount; waiting a frame keeps iOS from flashing the desktop shell.
+  if (platform === null) return null
+  if (platform === 'ios') return <MobileApp />
+
   return (
     <div
       className={cn(
-        'safe-area relative flex h-dvh w-screen flex-col overflow-hidden text-foreground',
+        'relative flex h-screen w-screen flex-col overflow-hidden text-foreground',
         editorOpen ? 'bg-transparent' : 'bg-[var(--surface-titlebar)]',
       )}
     >

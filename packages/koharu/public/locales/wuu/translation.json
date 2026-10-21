@@ -265,6 +265,14 @@
     "undo": "撤销",
     "view": "视图"
   },
+  "mobile": {
+    "done": "好了",
+    "edit": "编辑",
+    "editor": "编辑器",
+    "more": "更多操作",
+    "noProject": "呒没打开个项目",
+    "noProjectDescription": "到「项目」里向打开或者新建一个项目。"
+  },
   "model": {
     "baseUrl": "基础 URL",
     "default": "默认",

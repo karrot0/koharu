@@ -75,6 +75,7 @@ export function PageRail() {
   const selectPages = useKoharuStore((state) => state.selectPages)
   const selectLayers = useKoharuStore((state) => state.selectLayers)
   const setSettingsOpen = useKoharuStore((state) => state.setSettingsOpen)
+  const platform = usePlatform()
   const { importPages, importing } = useImportPages()
   const anchor = useRef<number | null>(null)
   const selectionRequest = useRef(0)
@@ -327,23 +328,26 @@ export function PageRail() {
         )}
 
         <div className='mt-auto flex shrink-0 items-center gap-2 px-2 py-2'>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='icon'
-                  className='size-8 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground'
-                  aria-label={t('menu.settings')}
-                  onClick={() => setSettingsOpen(true)}
-                />
-              }
-            >
-              <Settings className='size-4' />
-            </TooltipTrigger>
-            <TooltipContent side='right'>{t('menu.settings')}</TooltipContent>
-          </Tooltip>
+          {/* iOS reaches settings from its tab bar. */}
+          {platform !== 'ios' && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className='size-8 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground'
+                    aria-label={t('menu.settings')}
+                    onClick={() => setSettingsOpen(true)}
+                  />
+                }
+              >
+                <Settings className='size-4' />
+              </TooltipTrigger>
+              <TooltipContent side='right'>{t('menu.settings')}</TooltipContent>
+            </Tooltip>
+          )}
           <ResourceMonitor />
         </div>
       </aside>

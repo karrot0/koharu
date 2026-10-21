@@ -265,6 +265,14 @@
     "undo": "Geri Al",
     "view": "Görünüm"
   },
+  "mobile": {
+    "done": "Bitti",
+    "edit": "Düzenle",
+    "editor": "Düzenleyici",
+    "more": "Diğer işlemler",
+    "noProject": "Açık proje yok",
+    "noProjectDescription": "Projeler sekmesinde bir proje açın veya oluşturun."
+  },
   "model": {
     "baseUrl": "Temel URL",
     "default": "Varsayılan",

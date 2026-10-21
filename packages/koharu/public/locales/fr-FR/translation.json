@@ -265,6 +265,14 @@
     "undo": "Annuler",
     "view": "Affichage"
   },
+  "mobile": {
+    "done": "OK",
+    "edit": "Modifier",
+    "editor": "Éditeur",
+    "more": "Plus d’actions",
+    "noProject": "Aucun projet ouvert",
+    "noProjectDescription": "Ouvrez ou créez un projet dans Projets."
+  },
   "model": {
     "baseUrl": "URL de base",
     "default": "Par défaut",
